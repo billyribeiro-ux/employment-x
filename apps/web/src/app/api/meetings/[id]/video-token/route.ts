@@ -4,10 +4,12 @@ import { authenticateRequest } from '@/lib/server/auth';
 import { VideoTokenRequestSchema, VIDEO_ERROR_CODES } from '@/lib/validation/video';
 import { assertCanJoinMeeting, MeetingAccessError } from '@/server/services/meeting-access.service';
 import { issueJoinToken } from '@/server/services/video-token.service';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    checkRateLimit(req, 'video:token', RATE_LIMITS.api);
     const { id: meetingId } = await params;
     const ctx = await authenticateRequest(req.headers.get('authorization'));
 

@@ -3,49 +3,52 @@ import { type NextRequest } from 'next/server';
 import { authenticateRequest } from '@/lib/server/auth';
 import { handleRouteError, successResponse, AppError } from '@/lib/server/errors';
 import { checkUserRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { withIdempotency } from '@/server/middleware/idempotency';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id: conversationId } = await params;
-    const ctx = await authenticateRequest(req.headers.get('authorization'));
-    checkUserRateLimit(ctx.userId, 'chat:send', RATE_LIMITS.chat);
+  return withIdempotency(req, async () => {
+    try {
+      const { id: conversationId } = await params;
+      const ctx = await authenticateRequest(req.headers.get('authorization'));
+      checkUserRateLimit(ctx.userId, 'chat:send', RATE_LIMITS.chat);
 
-    const participant = await prisma.conversationParticipant.findUnique({
-      where: { conversationId_userId: { conversationId, userId: ctx.userId } },
-    });
-    if (!participant) {
-      throw new AppError('FORBIDDEN', 'Not a participant in this conversation');
+      const participant = await prisma.conversationParticipant.findUnique({
+        where: { conversationId_userId: { conversationId, userId: ctx.userId } },
+      });
+      if (!participant) {
+        throw new AppError('FORBIDDEN', 'Not a participant in this conversation');
+      }
+
+      const body = await req.json();
+      if (!body.body || typeof body.body !== 'string' || body.body.trim().length === 0) {
+        throw new AppError('VALIDATION_ERROR', 'Message body is required');
+      }
+
+      const message = await prisma.message.create({
+        data: {
+          conversationId,
+          senderId: ctx.userId,
+          body: body.body.trim(),
+        },
+      });
+
+      await prisma.conversation.update({
+        where: { id: conversationId },
+        data: { updatedAt: new Date() },
+      });
+
+      return successResponse(req, {
+        id: message.id,
+        conversation_id: message.conversationId,
+        sender_id: message.senderId,
+        body: message.body,
+        created_at: message.createdAt.toISOString(),
+      }, 201);
+    } catch (err) {
+      return handleRouteError(req, err);
     }
-
-    const body = await req.json();
-    if (!body.body || typeof body.body !== 'string' || body.body.trim().length === 0) {
-      throw new AppError('VALIDATION_ERROR', 'Message body is required');
-    }
-
-    const message = await prisma.message.create({
-      data: {
-        conversationId,
-        senderId: ctx.userId,
-        body: body.body.trim(),
-      },
-    });
-
-    await prisma.conversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
-    });
-
-    return successResponse(req, {
-      id: message.id,
-      conversation_id: message.conversationId,
-      sender_id: message.senderId,
-      body: message.body,
-      created_at: message.createdAt.toISOString(),
-    }, 201);
-  } catch (err) {
-    return handleRouteError(req, err);
-  }
+  });
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

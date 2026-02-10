@@ -3,13 +3,17 @@ import { type NextRequest } from 'next/server';
 import { authenticateRequest } from '@/lib/server/auth';
 import { handleRouteError, successResponse, AppError } from '@/lib/server/errors';
 import { getCorrelationId } from '@/lib/server/correlation';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { writeAuditEvent } from '@/lib/server/audit';
+import { withIdempotency } from '@/server/middleware/idempotency';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id: meetingId } = await params;
-    const ctx = await authenticateRequest(req.headers.get('authorization'));
+  return withIdempotency(req, async () => {
+    try {
+      checkRateLimit(req, 'scheduling:respond', RATE_LIMITS.scheduling);
+      const { id: meetingId } = await params;
+      const ctx = await authenticateRequest(req.headers.get('authorization'));
 
     const meeting = await prisma.meeting.findUnique({
       where: { id: meetingId },
@@ -59,8 +63,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       { action: auditAction, resourceType: 'meeting', resourceId: meetingId, correlationId: getCorrelationId(req) },
     );
 
-    return successResponse(req, { id: updated.id, status: updated.status });
-  } catch (err) {
-    return handleRouteError(req, err);
-  }
+      return successResponse(req, { id: updated.id, status: updated.status });
+    } catch (err) {
+      return handleRouteError(req, err);
+    }
+  });
 }

@@ -2,10 +2,14 @@ import { type NextRequest } from 'next/server';
 
 import { authenticateRequest } from '@/lib/server/auth';
 import { handleRouteError, successResponse, AppError } from '@/lib/server/errors';
+import { getCorrelationId } from '@/lib/server/correlation';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { writeAuditEvent } from '@/lib/server/audit';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest) {
   try {
+    checkRateLimit(req, 'chat:create', RATE_LIMITS.chat);
     const ctx = await authenticateRequest(req.headers.get('authorization'));
     const body = await req.json();
     const { participant_ids, subject, application_id } = body;
@@ -30,6 +34,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    await writeAuditEvent(
+      { tenantId: ctx.tenantId, userId: ctx.userId, role: ctx.role },
+      { action: 'conversation.create', resourceType: 'conversation', resourceId: conversation.id, correlationId: getCorrelationId(req) },
+    );
+
     return successResponse(req, {
       id: conversation.id,
       subject: conversation.subject,
@@ -52,6 +61,7 @@ export async function GET(req: NextRequest) {
 
     const conversations = await prisma.conversation.findMany({
       where: {
+        tenantId: ctx.tenantId,
         participants: { some: { userId: ctx.userId } },
       },
       include: {
