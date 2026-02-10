@@ -27,6 +27,10 @@ model User {
   candidateProfile  CandidateProfile?
   jobsCreated       Job[]              @relation("JobsCreated")
   applications      Application[]      @relation("ApplicationsSubmitted")
+  conversationParts ConversationParticipant[]
+  messagesSent      Message[]          @relation("MessagesSent")
+  meetingsRequested MeetingRequest[]   @relation("MeetingRequester")
+  meetingsReceived  MeetingRequest[]   @relation("MeetingRequestee")
 
   @@map("users")
 }
@@ -173,6 +177,81 @@ model Application {
   @@map("applications")
 }
 
+model Conversation {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  applicationId  String?  @map("application_id") @db.Uuid
+  subject        String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  participants   ConversationParticipant[]
+  messages       Message[]
+
+  @@index([tenantId])
+  @@index([applicationId])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id              String   @id @default(uuid()) @db.Uuid
+  conversationId  String   @map("conversation_id") @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  lastReadAt      DateTime? @map("last_read_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id              String   @id @default(uuid()) @db.Uuid
+  conversationId  String   @map("conversation_id") @db.Uuid
+  senderId        String   @map("sender_id") @db.Uuid
+  body            String
+  editedAt        DateTime? @map("edited_at")
+  deletedAt       DateTime? @map("deleted_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User         @relation("MessagesSent", fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model MeetingRequest {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @map("tenant_id") @db.Uuid
+  requesterId     String        @map("requester_id") @db.Uuid
+  requesteeId     String        @map("requestee_id") @db.Uuid
+  applicationId   String?       @map("application_id") @db.Uuid
+  title           String
+  description     String?
+  proposedAt      DateTime      @map("proposed_at")
+  durationMinutes Int           @default(30) @map("duration_minutes")
+  location        String?
+  meetingUrl      String?       @map("meeting_url")
+  status          MeetingStatus @default(pending)
+  respondedAt     DateTime?     @map("responded_at")
+  cancelledAt     DateTime?     @map("cancelled_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  requester       User          @relation("MeetingRequester", fields: [requesterId], references: [id])
+  requestee       User          @relation("MeetingRequestee", fields: [requesteeId], references: [id])
+
+  @@index([tenantId])
+  @@index([requesterId])
+  @@index([requesteeId])
+  @@index([status])
+  @@map("meeting_requests")
+}
+
 model AuditEvent {
   id             String   @id @default(uuid()) @db.Uuid
   tenantId       String   @map("tenant_id") @db.Uuid
@@ -265,4 +344,14 @@ enum ApplicationStage {
   withdrawn
 
   @@map("application_stage")
+}
+
+enum MeetingStatus {
+  pending
+  accepted
+  denied
+  cancelled
+  completed
+
+  @@map("meeting_status")
 }
