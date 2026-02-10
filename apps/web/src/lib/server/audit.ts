@@ -33,6 +33,8 @@ export type AuditAction =
   | 'billing.cancel'
   | 'billing.plan_change'
   | 'billing.webhook'
+  | 'conversation.create'
+  | 'message.send'
   | 'demo.start'
   | 'demo.reset';
 
