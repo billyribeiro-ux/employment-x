@@ -1,0 +1,264 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * EmploymentX Design Token System
+ * --------------------------------
+ * Palette anchors (hex reference — never use directly in components):
+ *   ex-navy:    #0B1020   hsl(226 52% 8%)
+ *   ex-blue:    #2563EB   hsl(217 91% 53%)
+ *   ex-cyan:    #06B6D4   hsl(189 95% 43%)
+ *   ex-violet:  #7C3AED   hsl(263 84% 58%)
+ *   ex-slate-900: #0F172A  hsl(222 47% 11%)
+ *   ex-slate-800: #1E293B  hsl(217 33% 17%)
+ *   ex-slate-700: #334155  hsl(215 25% 27%)
+ *   ex-slate-500: #64748B  hsl(215 16% 47%)
+ *   ex-slate-300: #CBD5E1  hsl(213 27% 84%)
+ *   ex-slate-100: #F1F5F9  hsl(210 40% 96%)
+ *   ex-white:     #FFFFFF
+ *   ex-success:   #16A34A  hsl(142 72% 37%)
+ *   ex-warning:   #D97706  hsl(38 92% 44%)
+ *   ex-danger:    #DC2626  hsl(0 84% 51%)
+ *   ex-info:      #0284C7  hsl(201 96% 40%)
+ *   ex-focus:     #38BDF8  hsl(198 93% 60%)
+ *
+ * All component styles consume CSS custom properties only.
+ */
+
+@layer base {
+  :root {
+    /* ── Background levels ── */
+    --background: 210 40% 98%;
+    --background-subtle: 210 40% 96%;
+    --background-inset: 0 0% 100%;
+
+    /* ── Surface (cards / panels / modals) ── */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --surface: 0 0% 100%;
+    --surface-foreground: 222 47% 11%;
+
+    /* ── Foreground / text ── */
+    --foreground: 222 47% 11%;
+    --foreground-secondary: 215 16% 47%;
+    --foreground-muted: 215 16% 47%;
+
+    /* ── Brand ── */
+    --primary: 217 91% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 189 95% 43%;
+    --secondary-foreground: 0 0% 100%;
+    --brand-violet: 263 84% 58%;
+    --brand-violet-foreground: 0 0% 100%;
+
+    /* ── Semantic ── */
+    --success: 142 72% 37%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 44%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 84% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --info: 201 96% 40%;
+    --info-foreground: 0 0% 100%;
+
+    /* ── Muted / accent ── */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    /* ── Border / input / ring ── */
+    --border: 213 27% 84%;
+    --input: 213 27% 84%;
+    --ring: 198 93% 60%;
+    --focus-ring: 198 93% 60%;
+
+    /* ── Chart palette ── */
+    --chart-1: 217 91% 53%;
+    --chart-2: 189 95% 43%;
+    --chart-3: 263 84% 58%;
+    --chart-4: 142 72% 37%;
+    --chart-5: 38 92% 44%;
+
+    /* ── Motion ── */
+    --duration-instant: 100ms;
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 400ms;
+    --duration-cinematic: 800ms;
+    --ease-default: cubic-bezier(0.25, 0.1, 0.25, 1);
+    --ease-in: cubic-bezier(0.42, 0, 1, 1);
+    --ease-out: cubic-bezier(0, 0, 0.58, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* ── Radius ── */
+    --radius: 0.5rem;
+
+    /* ── Demo banner ── */
+    --demo-banner-bg: 38 92% 44%;
+    --demo-banner-fg: 0 0% 100%;
+  }
+
+  .dark {
+    --background: 226 52% 8%;
+    --background-subtle: 222 47% 11%;
+    --background-inset: 217 33% 17%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 217 33% 17%;
+    --popover-foreground: 210 40% 98%;
+    --surface: 217 33% 17%;
+    --surface-foreground: 210 40% 98%;
+
+    --foreground: 210 40% 98%;
+    --foreground-secondary: 213 27% 84%;
+    --foreground-muted: 215 16% 47%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 189 95% 50%;
+    --secondary-foreground: 222 47% 11%;
+    --brand-violet: 263 84% 65%;
+    --brand-violet-foreground: 222 47% 11%;
+
+    --success: 142 72% 45%;
+    --success-foreground: 222 47% 11%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 210 40% 98%;
+    --info: 201 96% 50%;
+    --info-foreground: 222 47% 11%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --border: 215 25% 27%;
+    --input: 215 25% 27%;
+    --ring: 198 93% 60%;
+    --focus-ring: 198 93% 60%;
+
+    --chart-1: 217 91% 60%;
+    --chart-2: 189 95% 50%;
+    --chart-3: 263 84% 65%;
+    --chart-4: 142 72% 45%;
+    --chart-5: 38 92% 50%;
+
+    --demo-banner-bg: 38 92% 50%;
+    --demo-banner-fg: 222 47% 11%;
+  }
+
+  .high-contrast {
+    --background: 0 0% 100%;
+    --background-subtle: 0 0% 97%;
+    --background-inset: 0 0% 100%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --surface: 0 0% 100%;
+    --surface-foreground: 0 0% 0%;
+
+    --foreground: 0 0% 0%;
+    --foreground-secondary: 0 0% 20%;
+    --foreground-muted: 0 0% 35%;
+
+    --primary: 217 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 189 100% 30%;
+    --secondary-foreground: 0 0% 100%;
+
+    --success: 142 100% 25%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 100% 35%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 100% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --info: 201 100% 30%;
+    --info-foreground: 0 0% 100%;
+
+    --muted: 0 0% 93%;
+    --muted-foreground: 0 0% 25%;
+    --accent: 0 0% 90%;
+    --accent-foreground: 0 0% 0%;
+
+    --border: 0 0% 0%;
+    --input: 0 0% 0%;
+    --ring: 217 100% 40%;
+    --focus-ring: 217 100% 40%;
+  }
+
+  .dark.high-contrast {
+    --background: 0 0% 0%;
+    --background-subtle: 0 0% 5%;
+    --background-inset: 0 0% 8%;
+
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 100%;
+    --surface: 0 0% 8%;
+    --surface-foreground: 0 0% 100%;
+
+    --foreground: 0 0% 100%;
+    --foreground-secondary: 0 0% 85%;
+    --foreground-muted: 0 0% 65%;
+
+    --primary: 217 100% 65%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 189 100% 60%;
+    --secondary-foreground: 0 0% 0%;
+
+    --success: 142 100% 55%;
+    --success-foreground: 0 0% 0%;
+    --warning: 38 100% 60%;
+    --warning-foreground: 0 0% 0%;
+    --destructive: 0 100% 60%;
+    --destructive-foreground: 0 0% 0%;
+    --info: 201 100% 60%;
+    --info-foreground: 0 0% 0%;
+
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 75%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 100%;
+
+    --border: 0 0% 100%;
+    --input: 0 0% 100%;
+    --ring: 217 100% 65%;
+    --focus-ring: 217 100% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

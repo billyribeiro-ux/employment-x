@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --background-subtle: 210 40% 96%;
+    --background-inset: 0 0% 100%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --surface: 0 0% 100%;
+    --surface-foreground: 222 47% 11%;
+    --foreground: 222 47% 11%;
+    --foreground-secondary: 215 16% 47%;
+    --foreground-muted: 215 16% 47%;
+    --primary: 217 91% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 189 95% 43%;
+    --secondary-foreground: 0 0% 100%;
+    --brand-violet: 263 84% 58%;
+    --brand-violet-foreground: 0 0% 100%;
+    --success: 142 72% 37%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 44%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 84% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --info: 201 96% 40%;
+    --info-foreground: 0 0% 100%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --border: 213 27% 84%;
+    --input: 213 27% 84%;
+    --ring: 198 93% 60%;
+    --focus-ring: 198 93% 60%;
+    --chart-1: 217 91% 53%;
+    --chart-2: 189 95% 43%;
+    --chart-3: 263 84% 58%;
+    --chart-4: 142 72% 37%;
+    --chart-5: 38 92% 44%;
+    --duration-instant: 100ms;
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 400ms;
+    --duration-cinematic: 800ms;
+    --ease-default: cubic-bezier(0.25, 0.1, 0.25, 1);
+    --ease-out: cubic-bezier(0, 0, 0.58, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --radius: 0.5rem;
+    --demo-banner-bg: 38 92% 44%;
+    --demo-banner-fg: 0 0% 100%;
+  }
+
+  .dark {
+    --background: 226 52% 8%;
+    --background-subtle: 222 47% 11%;
+    --background-inset: 217 33% 17%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 217 33% 17%;
+    --popover-foreground: 210 40% 98%;
+    --surface: 217 33% 17%;
+    --surface-foreground: 210 40% 98%;
+    --foreground: 210 40% 98%;
+    --foreground-secondary: 213 27% 84%;
+    --foreground-muted: 215 16% 47%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 189 95% 50%;
+    --secondary-foreground: 222 47% 11%;
+    --brand-violet: 263 84% 65%;
+    --brand-violet-foreground: 222 47% 11%;
+    --success: 142 72% 45%;
+    --success-foreground: 222 47% 11%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 210 40% 98%;
+    --info: 201 96% 50%;
+    --info-foreground: 222 47% 11%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --border: 215 25% 27%;
+    --input: 215 25% 27%;
+    --ring: 198 93% 60%;
+    --focus-ring: 198 93% 60%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 189 95% 50%;
+    --chart-3: 263 84% 65%;
+    --chart-4: 142 72% 45%;
+    --chart-5: 38 92% 50%;
+    --demo-banner-bg: 38 92% 50%;
+    --demo-banner-fg: 222 47% 11%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
