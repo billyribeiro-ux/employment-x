@@ -38,10 +38,10 @@ export type AuditAction =
 export interface AuditEntry {
   action: AuditAction;
   resourceType: string;
-  resourceId?: string;
-  metadata?: Record<string, unknown>;
-  ipAddress?: string;
-  correlationId?: string;
+  resourceId?: string | undefined;
+  metadata?: Record<string, unknown> | undefined;
+  ipAddress?: string | undefined;
+  correlationId?: string | undefined;
 }
 
 export async function writeAuditEvent(
