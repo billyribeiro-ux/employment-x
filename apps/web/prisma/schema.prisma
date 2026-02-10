@@ -31,6 +31,7 @@ model User {
   messagesSent      Message[]          @relation("MessagesSent")
   meetingsRequested MeetingRequest[]   @relation("MeetingRequester")
   meetingsReceived  MeetingRequest[]   @relation("MeetingRequestee")
+  scorecardsGiven   Scorecard[]        @relation("ScorecardsGiven")
 
   @@map("users")
 }
@@ -170,11 +171,32 @@ model Application {
 
   job             Job               @relation(fields: [jobId], references: [id])
   candidate       User              @relation("ApplicationsSubmitted", fields: [candidateId], references: [id])
+  scorecards      Scorecard[]
 
   @@unique([jobId, candidateId])
   @@index([candidateId])
   @@index([jobId, stage])
   @@map("applications")
+}
+
+model Scorecard {
+  id              String   @id @default(uuid()) @db.Uuid
+  applicationId   String   @map("application_id") @db.Uuid
+  reviewerId      String   @map("reviewer_id") @db.Uuid
+  overallRating   Int      @map("overall_rating")
+  criteria        Json
+  recommendation  String?
+  notes           String?
+  submittedAt     DateTime @default(now()) @map("submitted_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  application     Application @relation(fields: [applicationId], references: [id])
+  reviewer        User        @relation("ScorecardsGiven", fields: [reviewerId], references: [id])
+
+  @@unique([applicationId, reviewerId])
+  @@index([applicationId])
+  @@map("scorecards")
 }
 
 model Conversation {
