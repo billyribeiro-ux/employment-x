@@ -102,10 +102,42 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo install sqlx-cli --no-default-features --features postgres
+      - name: "[F-146] Lint migrations for safety"
+        run: |
+          for f in infra/migrations/*.sql; do
+            echo "--- Checking $f ---"
+            if grep -iP 'ALTER\s+TABLE.*ADD\s+COLUMN.*NOT\s+NULL' "$f" | grep -ivP 'DEFAULT'; then
+              echo "ERROR: $f adds NOT NULL column without DEFAULT (will lock table)"
+              exit 1
+            fi
+            if grep -iP 'CREATE\s+INDEX(?!\s+CONCURRENTLY)' "$f" | grep -ivP 'UNIQUE'; then
+              echo "WARN: $f creates index without CONCURRENTLY (may lock table)"
+            fi
+            if ! head -5 "$f" | grep -qi 'rollback\|revert\|down'; then
+              echo "WARN: $f missing rollback notes in header"
+            fi
+          done
+          echo "Migration lint passed"
       - run: sqlx migrate run
         working-directory: apps/api-rust
         env:
           DATABASE_URL: postgres://employmentx:employmentx@localhost:5432/employmentx_test
+
+  prisma-validate:
+    name: Prisma Schema Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma validate
+        working-directory: apps/web
 
   e2e-smoke:
     name: E2E Smoke Tests

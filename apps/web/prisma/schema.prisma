@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(uuid()) @db.Uuid
+  email          String    @unique
+  passwordHash   String    @map("password_hash")
+  firstName      String    @map("first_name")
+  lastName       String    @map("last_name")
+  role           UserRole
+  emailVerified  Boolean   @default(false) @map("email_verified")
+  organizationId String?   @map("organization_id") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  auditEvents    AuditEvent[]
+
+  @@map("users")
+}
+
+model Organization {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  plan      String   @default("free")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users     User[]
+  auditEvents AuditEvent[]
+
+  @@map("organizations")
+}
+
+model AuditEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  actorId        String?  @map("actor_id") @db.Uuid
+  action         String
+  resourceType   String   @map("resource_type")
+  resourceId     String?  @map("resource_id")
+  metadata       Json?
+  correlationId  String?  @map("correlation_id")
+  ipAddress      String?  @map("ip_address")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tenant         Organization @relation(fields: [tenantId], references: [id])
+  actor          User?        @relation(fields: [actorId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([actorId])
+  @@index([action])
+  @@index([correlationId])
+  @@map("audit_events")
+}
+
+model IdempotencyKey {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  response    Json?
+  statusCode  Int?     @map("status_code")
+  createdAt   DateTime @default(now()) @map("created_at")
+  expiresAt   DateTime @map("expires_at")
+
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+enum UserRole {
+  candidate
+  employer
+  agency
+  admin
+
+  @@map("user_role")
+}
