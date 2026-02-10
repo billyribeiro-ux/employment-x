@@ -13,43 +13,65 @@ export async function POST(req: NextRequest) {
     checkUserRateLimit(ctx.userId, 'scheduling:create', RATE_LIMITS.scheduling);
 
     const body = await req.json();
-    const { requestee_id, title, proposed_at, duration_minutes, description, location, application_id } = body;
+    const {
+      title, description, scheduled_start_at, scheduled_end_at,
+      timezone, application_id, participants,
+    } = body;
 
-    if (!requestee_id || !title || !proposed_at) {
-      throw new AppError('VALIDATION_ERROR', 'Missing required fields: requestee_id, title, proposed_at');
+    if (!title || !scheduled_start_at || !scheduled_end_at || !participants?.length) {
+      throw new AppError('VALIDATION_ERROR', 'Missing required fields: title, scheduled_start_at, scheduled_end_at, participants');
     }
 
-    if (requestee_id === ctx.userId) {
-      throw new AppError('VALIDATION_ERROR', 'Cannot schedule a meeting with yourself');
+    const startAt = new Date(scheduled_start_at);
+    const endAt = new Date(scheduled_end_at);
+    if (startAt <= new Date()) {
+      throw new AppError('VALIDATION_ERROR', 'Start time must be in the future');
+    }
+    if (endAt <= startAt) {
+      throw new AppError('VALIDATION_ERROR', 'End time must be after start time');
     }
 
-    const proposedDate = new Date(proposed_at);
-    if (proposedDate <= new Date()) {
-      throw new AppError('VALIDATION_ERROR', 'Proposed time must be in the future');
-    }
+    const joinOpen = new Date(startAt.getTime() - 10 * 60 * 1000);
+    const joinClose = new Date(endAt.getTime() + 5 * 60 * 1000);
 
-    const meeting = await prisma.meetingRequest.create({
+    const meeting = await prisma.meeting.create({
       data: {
         tenantId: ctx.tenantId,
-        requesterId: ctx.userId,
-        requesteeId: requestee_id,
+        organizationId: ctx.tenantId,
         applicationId: application_id ?? null,
         title,
         description: description ?? null,
-        proposedAt: proposedDate,
-        durationMinutes: duration_minutes ?? 30,
-        location: location ?? null,
+        timezone: timezone ?? 'UTC',
+        scheduledStartAt: startAt,
+        scheduledEndAt: endAt,
+        joinWindowOpenAt: joinOpen,
+        joinWindowCloseAt: joinClose,
+        status: 'REQUESTED',
+        createdByUserId: ctx.userId,
+        providerRoomName: null,
+        participants: {
+          create: (participants as Array<{ user_id: string; role: string }>).map((p) => ({
+            tenantId: ctx.tenantId,
+            userId: p.user_id,
+            role: p.role as 'HOST' | 'INTERVIEWER' | 'CANDIDATE' | 'OBSERVER' | 'RECRUITER',
+          })),
+        },
+        events: {
+          create: { tenantId: ctx.tenantId, actorUserId: ctx.userId, type: 'REQUEST_CREATED' },
+        },
       },
+      include: { participants: true },
+    });
+
+    // Set deterministic room name
+    await prisma.meeting.update({
+      where: { id: meeting.id },
+      data: { providerRoomName: `t_${ctx.tenantId}_m_${meeting.id}` },
     });
 
     await writeAuditEvent(
       { tenantId: ctx.tenantId, userId: ctx.userId, role: ctx.role },
-      {
-        action: 'meeting.create',
-        resourceType: 'meeting_request',
-        resourceId: meeting.id,
-        correlationId: getCorrelationId(req),
-      },
+      { action: 'meeting.create', resourceType: 'meeting', resourceId: meeting.id, correlationId: getCorrelationId(req) },
     );
 
     return successResponse(req, mapMeetingResponse(meeting), 201);
@@ -63,35 +85,23 @@ export async function GET(req: NextRequest) {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
     const url = new URL(req.url);
     const status = url.searchParams.get('status');
-    const role = url.searchParams.get('role');
 
-    const where: Record<string, unknown> = {};
-    if (role === 'requester') {
-      where['requesterId'] = ctx.userId;
-    } else if (role === 'requestee') {
-      where['requesteeId'] = ctx.userId;
-    } else {
-      where['OR'] = [{ requesterId: ctx.userId }, { requesteeId: ctx.userId }];
-    }
-    if (status) where['status'] = status;
-
-    const meetings = await prisma.meetingRequest.findMany({
-      where,
-      orderBy: { proposedAt: 'asc' },
+    const meetings = await prisma.meeting.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        participants: { some: { userId: ctx.userId } },
+        ...(status ? { status: status as never } : {}),
+      },
+      orderBy: { scheduledStartAt: 'asc' },
       take: 50,
       include: {
-        requester: { select: { id: true, firstName: true, lastName: true } },
-        requestee: { select: { id: true, firstName: true, lastName: true } },
+        participants: {
+          include: { user: { select: { id: true, firstName: true, lastName: true } } },
+        },
       },
     });
 
-    return successResponse(req, {
-      data: meetings.map((m) => ({
-        ...mapMeetingResponse(m),
-        requester: { id: m.requester.id, first_name: m.requester.firstName, last_name: m.requester.lastName },
-        requestee: { id: m.requestee.id, first_name: m.requestee.firstName, last_name: m.requestee.lastName },
-      })),
-    });
+    return successResponse(req, { data: meetings.map(mapMeetingResponse) });
   } catch (err) {
     return handleRouteError(req, err);
   }
@@ -102,19 +112,26 @@ function mapMeetingResponse(m: any) {
   return {
     id: m.id,
     tenant_id: m.tenantId,
-    requester_id: m.requesterId,
-    requestee_id: m.requesteeId,
+    organization_id: m.organizationId,
     application_id: m.applicationId,
     title: m.title,
     description: m.description,
-    proposed_at: m.proposedAt.toISOString(),
-    duration_minutes: m.durationMinutes,
-    location: m.location,
-    meeting_url: m.meetingUrl,
+    timezone: m.timezone,
+    scheduled_start_at: m.scheduledStartAt?.toISOString() ?? null,
+    scheduled_end_at: m.scheduledEndAt?.toISOString() ?? null,
+    join_window_open_at: m.joinWindowOpenAt?.toISOString() ?? null,
+    join_window_close_at: m.joinWindowCloseAt?.toISOString() ?? null,
     status: m.status,
-    responded_at: m.respondedAt?.toISOString() ?? null,
-    cancelled_at: m.cancelledAt?.toISOString() ?? null,
+    provider_room_name: m.providerRoomName,
+    created_by_user_id: m.createdByUserId,
+    ended_at: m.endedAt?.toISOString() ?? null,
     created_at: m.createdAt.toISOString(),
     updated_at: m.updatedAt.toISOString(),
+    participants: m.participants?.map((p: any) => ({
+      user_id: p.userId,
+      role: p.role,
+      attendance_status: p.attendanceStatus,
+      user: p.user ? { id: p.user.id, first_name: p.user.firstName, last_name: p.user.lastName } : undefined,
+    })),
   };
 }

@@ -11,22 +11,22 @@ import { logger } from '@/server/observability/logger';
 export async function startInterviewSession(meetingId: string, actorId: string, tenantId: string) {
   const log = logger.child({ action: 'start_interview', meetingId });
 
-  const meeting = await prisma.meetingRequest.findUnique({ where: { id: meetingId } });
+  const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
   if (!meeting || meeting.tenantId !== tenantId) {
     return { success: false as const, error: 'Meeting not found' };
   }
-  if (meeting.status !== 'accepted') {
-    return { success: false as const, error: 'Meeting must be accepted to start interview' };
+  if (meeting.status !== 'CONFIRMED' && meeting.status !== 'IN_PROGRESS') {
+    return { success: false as const, error: 'Meeting must be confirmed to start interview' };
   }
 
-  const updated = await prisma.meetingRequest.update({
+  const updated = await prisma.meeting.update({
     where: { id: meetingId },
-    data: { status: 'completed' },
+    data: { status: 'IN_PROGRESS' },
   });
 
   await writeAuditEvent(
     { tenantId, userId: actorId, role: 'employer' },
-    { action: 'interview.start', resourceType: 'meeting_request', resourceId: meetingId },
+    { action: 'interview.start', resourceType: 'meeting', resourceId: meetingId },
   );
 
   log.info({ meetingId }, 'Interview session started');

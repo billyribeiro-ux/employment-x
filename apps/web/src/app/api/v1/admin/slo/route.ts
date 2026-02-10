@@ -38,8 +38,8 @@ export async function GET(req: NextRequest) {
       prisma.application.count({ where: { createdAt: { gte: last7d } } }),
       prisma.conversation.count(),
       prisma.message.count({ where: { createdAt: { gte: last24h } } }),
-      prisma.meetingRequest.count(),
-      prisma.meetingRequest.count({ where: { status: 'pending' } }),
+      prisma.meeting.count(),
+      prisma.meeting.count({ where: { status: 'REQUESTED' } }),
       prisma.auditEvent.count({ where: { createdAt: { gte: last24h } } }),
       prisma.session.count({ where: { expiresAt: { lt: now } } }),
     ]);

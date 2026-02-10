@@ -16,8 +16,8 @@ async function processReminder(job: Job<ReminderJob>): Promise<void> {
   const { meetingId, userId, tenantId, type } = parsed.data;
   log.info({ meetingId, userId, tenantId, type }, 'Processing reminder');
 
-  const meeting = await prisma.meetingRequest.findUnique({ where: { id: meetingId } });
-  if (!meeting || meeting.status === 'cancelled' || meeting.status === 'completed') {
+  const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
+  if (!meeting || ['CANCELED', 'COMPLETED', 'EXPIRED', 'NO_SHOW'].includes(meeting.status)) {
     log.info({ meetingId, status: meeting?.status }, 'Meeting no longer active, skipping reminder');
     return;
   }
@@ -28,7 +28,7 @@ async function processReminder(job: Job<ReminderJob>): Promise<void> {
       type: 'meeting_reminder',
       title: `Meeting reminder: ${meeting.title}`,
       body: `Your meeting "${meeting.title}" is coming up (${type} reminder).`,
-      resourceType: 'meeting_request',
+      resourceType: 'meeting',
       resourceId: meetingId,
     },
   });

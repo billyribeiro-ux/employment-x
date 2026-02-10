@@ -6,22 +6,27 @@ import { prisma } from '@/lib/server/db';
 import { writeAuditEvent } from '@/lib/server/audit';
 import { logger } from '@/server/observability/logger';
 
-// --- F-019/F-021: Create Meeting Request ---
+// --- Create Meeting (new schema) ---
 
 const CreateMeetingSchema = z.object({
-  tenantId: z.string().uuid(),
-  requesterId: z.string().uuid(),
-  requesteeId: z.string().uuid(),
+  tenantId: z.string(),
+  organizationId: z.string(),
+  applicationId: z.string().optional(),
+  createdByUserId: z.string(),
   title: z.string().min(3).max(200),
   description: z.string().max(2000).optional(),
-  proposedAt: z.string().datetime(),
-  durationMinutes: z.number().int().min(15).max(480).default(60),
   timezone: z.string().max(50).default('UTC'),
-  bufferMinutes: z.number().int().min(0).max(60).default(15),
-  location: z.string().max(500).optional(),
+  scheduledStartAt: z.string().datetime(),
+  scheduledEndAt: z.string().datetime(),
+  joinWindowMinutesBefore: z.number().int().min(0).max(60).default(10),
+  joinWindowMinutesAfter: z.number().int().min(0).max(30).default(5),
+  participants: z.array(z.object({
+    userId: z.string(),
+    role: z.enum(['HOST', 'INTERVIEWER', 'CANDIDATE', 'OBSERVER', 'RECRUITER']),
+  })).min(1),
 });
 
-export async function createMeetingRequest(input: z.infer<typeof CreateMeetingSchema>) {
+export async function createMeeting(input: z.infer<typeof CreateMeetingSchema>) {
   const log = logger.child({ action: 'create_meeting', tenantId: input.tenantId });
   const parsed = CreateMeetingSchema.safeParse(input);
   if (!parsed.success) {
@@ -29,86 +34,134 @@ export async function createMeetingRequest(input: z.infer<typeof CreateMeetingSc
   }
 
   const data = parsed.data;
-  const proposedDate = new Date(data.proposedAt);
+  const startAt = new Date(data.scheduledStartAt);
+  const endAt = new Date(data.scheduledEndAt);
+  const joinOpen = new Date(startAt.getTime() - data.joinWindowMinutesBefore * 60 * 1000);
+  const joinClose = new Date(endAt.getTime() + data.joinWindowMinutesAfter * 60 * 1000);
 
-  // F-172: Conflict detection
-  const conflict = await detectConflict(
-    data.requesteeId,
-    proposedDate,
-    data.durationMinutes,
-    data.bufferMinutes,
-  );
-  if (conflict) {
-    return { success: false as const, error: `Time conflict with existing meeting: ${conflict.title}` };
+  if (endAt <= startAt) {
+    return { success: false as const, error: 'End time must be after start time' };
   }
 
-  const meeting = await prisma.meetingRequest.create({
+  // Conflict detection for all participants
+  for (const p of data.participants) {
+    const conflict = await detectConflict(p.userId, startAt, endAt);
+    if (conflict) {
+      return { success: false as const, error: `Time conflict for participant ${p.userId}: ${conflict.title}` };
+    }
+  }
+
+  const meeting = await prisma.meeting.create({
     data: {
       tenantId: data.tenantId,
-      requesterId: data.requesterId,
-      requesteeId: data.requesteeId,
+      organizationId: data.organizationId,
+      applicationId: data.applicationId ?? null,
       title: data.title,
       description: data.description ?? null,
-      proposedAt: proposedDate,
-      durationMinutes: data.durationMinutes,
-      location: data.location ?? null,
-      status: 'pending',
+      timezone: data.timezone,
+      scheduledStartAt: startAt,
+      scheduledEndAt: endAt,
+      joinWindowOpenAt: joinOpen,
+      joinWindowCloseAt: joinClose,
+      status: 'REQUESTED',
+      createdByUserId: data.createdByUserId,
+      providerRoomName: `t_${data.tenantId}_m_`,
+      participants: {
+        create: data.participants.map((p) => ({
+          tenantId: data.tenantId,
+          userId: p.userId,
+          role: p.role,
+        })),
+      },
+      events: {
+        create: {
+          tenantId: data.tenantId,
+          actorUserId: data.createdByUserId,
+          type: 'REQUEST_CREATED',
+        },
+      },
     },
+    include: { participants: true },
+  });
+
+  // Fix providerRoomName with actual meeting ID
+  await prisma.meeting.update({
+    where: { id: meeting.id },
+    data: { providerRoomName: `t_${data.tenantId}_m_${meeting.id}` },
   });
 
   await writeAuditEvent(
-    { tenantId: data.tenantId, userId: data.requesterId, role: 'employer' },
-    { action: 'meeting.create', resourceType: 'meeting_request', resourceId: meeting.id },
+    { tenantId: data.tenantId, userId: data.createdByUserId, role: 'employer' },
+    { action: 'meeting.create', resourceType: 'meeting', resourceId: meeting.id },
   );
 
-  log.info({ meetingId: meeting.id }, 'Meeting request created');
+  log.info({ meetingId: meeting.id }, 'Meeting created');
   return { success: true as const, meeting };
 }
 
-// --- F-022: Accept/Deny Meeting ---
+// --- Confirm/Deny Meeting ---
 
 export async function respondToMeeting(
   meetingId: string,
   userId: string,
   tenantId: string,
-  response: 'accepted' | 'denied',
+  response: 'CONFIRMED' | 'DENIED',
 ) {
   const log = logger.child({ action: 'respond_meeting', meetingId, response });
 
-  const meeting = await prisma.meetingRequest.findUnique({ where: { id: meetingId } });
+  const meeting = await prisma.meeting.findUnique({
+    where: { id: meetingId },
+    include: { participants: true },
+  });
   if (!meeting || meeting.tenantId !== tenantId) {
     return { success: false as const, error: 'Meeting not found' };
   }
-  if (meeting.requesteeId !== userId) {
-    return { success: false as const, error: 'Only the requestee can respond' };
+
+  const participant = meeting.participants.find((p) => p.userId === userId);
+  if (!participant) {
+    return { success: false as const, error: 'Not a participant' };
   }
-  if (meeting.status !== 'pending') {
+  if (meeting.status !== 'REQUESTED' && meeting.status !== 'RESCHEDULE_REQUESTED') {
     return { success: false as const, error: `Cannot respond to a ${meeting.status} meeting` };
   }
 
-  const updated = await prisma.meetingRequest.update({
+  const newStatus = response === 'CONFIRMED' ? 'CONFIRMED' as const : 'DENIED' as const;
+
+  const updated = await prisma.meeting.update({
     where: { id: meetingId },
-    data: { status: response },
+    data: { status: newStatus },
   });
 
-  const auditAction = response === 'accepted' ? 'meeting.accept' as const : 'meeting.deny' as const;
+  const eventType = response === 'CONFIRMED' ? 'REQUEST_ACCEPTED' as const : 'REQUEST_DENIED' as const;
+  await prisma.meetingEvent.create({
+    data: { tenantId, meetingId, actorUserId: userId, type: eventType },
+  });
+
+  if (response === 'CONFIRMED') {
+    await prisma.meetingParticipant.update({
+      where: { meetingId_userId: { meetingId, userId } },
+      data: { attendanceStatus: 'ACCEPTED' },
+    });
+  }
+
+  const auditAction = response === 'CONFIRMED' ? 'meeting.accept' as const : 'meeting.deny' as const;
   await writeAuditEvent(
     { tenantId, userId, role: 'employer' },
-    { action: auditAction, resourceType: 'meeting_request', resourceId: meetingId },
+    { action: auditAction, resourceType: 'meeting', resourceId: meetingId },
   );
 
   log.info({ meetingId, response }, 'Meeting response recorded');
   return { success: true as const, meeting: updated };
 }
 
-// --- F-023: Reschedule Meeting ---
+// --- Reschedule Meeting ---
 
 const RescheduleSchema = z.object({
-  meetingId: z.string().uuid(),
-  actorId: z.string().uuid(),
-  tenantId: z.string().uuid(),
-  newProposedAt: z.string().datetime(),
-  newDurationMinutes: z.number().int().min(15).max(480).optional(),
+  meetingId: z.string(),
+  actorId: z.string(),
+  tenantId: z.string(),
+  newStartAt: z.string().datetime(),
+  newEndAt: z.string().datetime(),
   reason: z.string().max(500).optional(),
 });
 
@@ -119,85 +172,93 @@ export async function rescheduleMeeting(input: z.infer<typeof RescheduleSchema>)
     return { success: false as const, error: parsed.error.flatten().fieldErrors };
   }
 
-  const { meetingId, actorId, tenantId, newProposedAt, newDurationMinutes, reason } = parsed.data;
+  const { meetingId, actorId, tenantId, newStartAt, newEndAt, reason } = parsed.data;
 
-  const meeting = await prisma.meetingRequest.findUnique({ where: { id: meetingId } });
+  const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
   if (!meeting || meeting.tenantId !== tenantId) {
     return { success: false as const, error: 'Meeting not found' };
   }
-  if (meeting.status === 'completed' || meeting.status === 'cancelled') {
+  if (['COMPLETED', 'CANCELED', 'IN_PROGRESS'].includes(meeting.status)) {
     return { success: false as const, error: `Cannot reschedule a ${meeting.status} meeting` };
   }
 
-  const updated = await prisma.meetingRequest.update({
+  const startAt = new Date(newStartAt);
+  const endAt = new Date(newEndAt);
+  const joinOpen = new Date(startAt.getTime() - 10 * 60 * 1000);
+  const joinClose = new Date(endAt.getTime() + 5 * 60 * 1000);
+
+  const updated = await prisma.meeting.update({
     where: { id: meetingId },
     data: {
-      proposedAt: new Date(newProposedAt),
-      ...(newDurationMinutes ? { durationMinutes: newDurationMinutes } : {}),
-      status: 'pending',
+      scheduledStartAt: startAt,
+      scheduledEndAt: endAt,
+      joinWindowOpenAt: joinOpen,
+      joinWindowCloseAt: joinClose,
+      status: 'RESCHEDULE_REQUESTED',
+    },
+  });
+
+  await prisma.meetingEvent.create({
+    data: {
+      tenantId, meetingId, actorUserId: actorId,
+      type: 'RESCHEDULE_REQUESTED',
+      payloadJson: { reason, newStartAt, newEndAt },
     },
   });
 
   await writeAuditEvent(
     { tenantId, userId: actorId, role: 'employer' },
-    {
-      action: 'meeting.reschedule',
-      resourceType: 'meeting_request',
-      resourceId: meetingId,
-      metadata: { reason, newProposedAt },
-    },
+    { action: 'meeting.reschedule', resourceType: 'meeting', resourceId: meetingId, metadata: { reason } },
   );
 
   log.info({ meetingId }, 'Meeting rescheduled');
   return { success: true as const, meeting: updated };
 }
 
-// --- F-052: Cancel Meeting ---
+// --- Cancel Meeting ---
 
-export async function cancelMeeting(meetingId: string, actorId: string, tenantId: string) {
+export async function cancelMeeting(meetingId: string, actorId: string, tenantId: string, reason?: string) {
   const log = logger.child({ action: 'cancel_meeting', meetingId });
 
-  const meeting = await prisma.meetingRequest.findUnique({ where: { id: meetingId } });
+  const meeting = await prisma.meeting.findUnique({ where: { id: meetingId } });
   if (!meeting || meeting.tenantId !== tenantId) {
     return { success: false as const, error: 'Meeting not found' };
   }
-  if (meeting.status === 'completed' || meeting.status === 'cancelled') {
+  if (['COMPLETED', 'CANCELED'].includes(meeting.status)) {
     return { success: false as const, error: `Cannot cancel a ${meeting.status} meeting` };
   }
 
-  const updated = await prisma.meetingRequest.update({
+  const updated = await prisma.meeting.update({
     where: { id: meetingId },
-    data: { status: 'cancelled' },
+    data: { status: 'CANCELED', canceledByUserId: actorId, canceledReason: reason ?? null },
+  });
+
+  await prisma.meetingEvent.create({
+    data: { tenantId, meetingId, actorUserId: actorId, type: 'CANCELED', payloadJson: { reason } },
   });
 
   await writeAuditEvent(
     { tenantId, userId: actorId, role: 'employer' },
-    { action: 'meeting.cancel', resourceType: 'meeting_request', resourceId: meetingId },
+    { action: 'meeting.cancel', resourceType: 'meeting', resourceId: meetingId },
   );
 
   log.info({ meetingId }, 'Meeting cancelled');
   return { success: true as const, meeting: updated };
 }
 
-// --- F-172: Conflict Detection ---
+// --- Conflict Detection ---
 
 async function detectConflict(
   userId: string,
-  proposedAt: Date,
-  durationMinutes: number,
-  bufferMinutes: number,
+  startAt: Date,
+  endAt: Date,
 ): Promise<{ title: string } | null> {
-  const startWithBuffer = new Date(proposedAt.getTime() - bufferMinutes * 60 * 1000);
-  const endWithBuffer = new Date(proposedAt.getTime() + (durationMinutes + bufferMinutes) * 60 * 1000);
-
-  const conflicts = await prisma.meetingRequest.findMany({
+  const conflicts = await prisma.meeting.findMany({
     where: {
-      OR: [
-        { requesterId: userId },
-        { requesteeId: userId },
-      ],
-      status: { in: ['pending', 'accepted'] },
-      proposedAt: { gte: startWithBuffer, lt: endWithBuffer },
+      participants: { some: { userId } },
+      status: { in: ['REQUESTED', 'CONFIRMED', 'IN_PROGRESS'] },
+      scheduledStartAt: { lt: endAt },
+      scheduledEndAt: { gt: startAt },
     },
     select: { title: true },
     take: 1,
@@ -206,7 +267,7 @@ async function detectConflict(
   return conflicts[0] ?? null;
 }
 
-// --- F-173: Timezone-Aware Availability ---
+// --- Availability ---
 
 export interface AvailabilitySlot {
   start: string;
@@ -225,17 +286,16 @@ export async function getUserAvailability(
   const dayEnd = new Date(date);
   dayEnd.setUTCHours(23, 59, 59, 999);
 
-  const meetings = await prisma.meetingRequest.findMany({
+  const meetings = await prisma.meeting.findMany({
     where: {
-      OR: [{ requesterId: userId }, { requesteeId: userId }],
-      status: { in: ['pending', 'accepted'] },
-      proposedAt: { gte: dayStart, lte: dayEnd },
+      participants: { some: { userId } },
+      status: { in: ['REQUESTED', 'CONFIRMED', 'IN_PROGRESS'] },
+      scheduledStartAt: { gte: dayStart, lte: dayEnd },
     },
-    select: { proposedAt: true, durationMinutes: true },
-    orderBy: { proposedAt: 'asc' },
+    select: { scheduledStartAt: true, scheduledEndAt: true },
+    orderBy: { scheduledStartAt: 'asc' },
   });
 
-  // Generate hourly slots (9 AM - 6 PM in the given timezone concept)
   const slots: AvailabilitySlot[] = [];
   for (let hour = 9; hour < 18; hour++) {
     const slotStart = new Date(dayStart);
@@ -243,10 +303,9 @@ export async function getUserAvailability(
     const slotEnd = new Date(dayStart);
     slotEnd.setUTCHours(hour + 1, 0, 0, 0);
 
-    const isOccupied = meetings.some((m) => {
-      const meetingEnd = new Date(m.proposedAt.getTime() + m.durationMinutes * 60 * 1000);
-      return m.proposedAt < slotEnd && meetingEnd > slotStart;
-    });
+    const isOccupied = meetings.some((m) =>
+      m.scheduledStartAt < slotEnd && m.scheduledEndAt > slotStart,
+    );
 
     slots.push({
       start: slotStart.toISOString(),

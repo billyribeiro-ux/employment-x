@@ -11,56 +11,67 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { id: meetingId } = await params;
     const ctx = await authenticateRequest(req.headers.get('authorization'));
 
-    const meeting = await prisma.meetingRequest.findUnique({ where: { id: meetingId } });
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+      include: { participants: true },
+    });
     if (!meeting) {
-      throw new AppError('NOT_FOUND', 'Meeting request not found');
+      throw new AppError('NOT_FOUND', 'Meeting not found');
     }
 
-    if (meeting.requesterId !== ctx.userId && meeting.requesteeId !== ctx.userId) {
+    const isParticipant = meeting.participants.some((p) => p.userId === ctx.userId);
+    if (!isParticipant) {
       throw new AppError('FORBIDDEN', 'Only participants can reschedule this meeting');
     }
 
-    if (meeting.status === 'cancelled' || meeting.status === 'completed') {
+    if (['CANCELED', 'COMPLETED', 'IN_PROGRESS'].includes(meeting.status)) {
       throw new AppError('CONFLICT', `Cannot reschedule a ${meeting.status} meeting`);
     }
 
     const body = await req.json();
-    const { proposed_at, duration_minutes } = body;
+    const { scheduled_start_at, scheduled_end_at } = body;
 
-    if (!proposed_at) {
-      throw new AppError('VALIDATION_ERROR', 'proposed_at is required');
+    if (!scheduled_start_at || !scheduled_end_at) {
+      throw new AppError('VALIDATION_ERROR', 'scheduled_start_at and scheduled_end_at are required');
     }
 
-    const proposedDate = new Date(proposed_at);
-    if (proposedDate <= new Date()) {
-      throw new AppError('VALIDATION_ERROR', 'Proposed time must be in the future');
+    const startAt = new Date(scheduled_start_at);
+    const endAt = new Date(scheduled_end_at);
+    if (startAt <= new Date()) {
+      throw new AppError('VALIDATION_ERROR', 'Start time must be in the future');
     }
 
-    const updated = await prisma.meetingRequest.update({
+    const joinOpen = new Date(startAt.getTime() - 10 * 60 * 1000);
+    const joinClose = new Date(endAt.getTime() + 5 * 60 * 1000);
+
+    const updated = await prisma.meeting.update({
       where: { id: meetingId },
       data: {
-        proposedAt: proposedDate,
-        durationMinutes: duration_minutes ?? meeting.durationMinutes,
-        status: 'pending',
-        respondedAt: null,
+        scheduledStartAt: startAt,
+        scheduledEndAt: endAt,
+        joinWindowOpenAt: joinOpen,
+        joinWindowCloseAt: joinClose,
+        status: 'RESCHEDULE_REQUESTED',
+      },
+    });
+
+    await prisma.meetingEvent.create({
+      data: {
+        tenantId: meeting.tenantId, meetingId, actorUserId: ctx.userId,
+        type: 'RESCHEDULE_REQUESTED',
+        payloadJson: { scheduled_start_at, scheduled_end_at },
       },
     });
 
     await writeAuditEvent(
       { tenantId: meeting.tenantId, userId: ctx.userId, role: ctx.role },
-      {
-        action: 'meeting.reschedule',
-        resourceType: 'meeting_request',
-        resourceId: meetingId,
-        metadata: { new_proposed_at: proposedDate.toISOString() },
-        correlationId: getCorrelationId(req),
-      },
+      { action: 'meeting.reschedule', resourceType: 'meeting', resourceId: meetingId, correlationId: getCorrelationId(req) },
     );
 
     return successResponse(req, {
       id: updated.id,
-      proposed_at: updated.proposedAt.toISOString(),
-      duration_minutes: updated.durationMinutes,
+      scheduled_start_at: updated.scheduledStartAt.toISOString(),
+      scheduled_end_at: updated.scheduledEndAt.toISOString(),
       status: updated.status,
     });
   } catch (err) {

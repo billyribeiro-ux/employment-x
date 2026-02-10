@@ -29,8 +29,8 @@ model User {
   applications      Application[]      @relation("ApplicationsSubmitted")
   conversationParts ConversationParticipant[]
   messagesSent      Message[]          @relation("MessagesSent")
-  meetingsRequested MeetingRequest[]   @relation("MeetingRequester")
-  meetingsReceived  MeetingRequest[]   @relation("MeetingRequestee")
+  meetingsCreated        Meeting[]              @relation("MeetingsCreated")
+  meetingParticipations   MeetingParticipant[]
   scorecardsGiven   Scorecard[]        @relation("ScorecardsGiven")
   savedSearches     SavedSearch[]
   notifications     Notification[]
@@ -438,32 +438,103 @@ model Message {
   @@map("messages")
 }
 
-model MeetingRequest {
-  id              String        @id @default(uuid()) @db.Uuid
-  tenantId        String        @map("tenant_id") @db.Uuid
-  requesterId     String        @map("requester_id") @db.Uuid
-  requesteeId     String        @map("requestee_id") @db.Uuid
-  applicationId   String?       @map("application_id") @db.Uuid
-  title           String
-  description     String?
-  proposedAt      DateTime      @map("proposed_at")
-  durationMinutes Int           @default(30) @map("duration_minutes")
-  location        String?
-  meetingUrl      String?       @map("meeting_url")
-  status          MeetingStatus @default(pending)
-  respondedAt     DateTime?     @map("responded_at")
-  cancelledAt     DateTime?     @map("cancelled_at")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+model Meeting {
+  id                String              @id @default(cuid())
+  tenantId          String              @map("tenant_id")
+  organizationId    String              @map("organization_id")
+  applicationId     String?             @map("application_id")
+  title             String
+  description       String?
+  timezone          String              @default("UTC")
 
-  requester       User          @relation("MeetingRequester", fields: [requesterId], references: [id])
-  requestee       User          @relation("MeetingRequestee", fields: [requesteeId], references: [id])
+  scheduledStartAt  DateTime            @map("scheduled_start_at")
+  scheduledEndAt    DateTime            @map("scheduled_end_at")
+  joinWindowOpenAt  DateTime            @map("join_window_open_at")
+  joinWindowCloseAt DateTime            @map("join_window_close_at")
 
-  @@index([tenantId])
-  @@index([requesterId])
-  @@index([requesteeId])
-  @@index([status])
-  @@map("meeting_requests")
+  status            VideoMeetingStatus  @default(DRAFT)
+
+  provider          String              @default("livekit")
+  providerRoomName  String?             @unique @map("provider_room_name")
+  providerRoomSid   String?             @map("provider_room_sid")
+
+  createdByUserId   String              @map("created_by_user_id")
+  canceledByUserId  String?             @map("canceled_by_user_id")
+  canceledReason    String?             @map("canceled_reason")
+  endedAt           DateTime?           @map("ended_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  createdBy         User                @relation("MeetingsCreated", fields: [createdByUserId], references: [id])
+  participants      MeetingParticipant[]
+  events            MeetingEvent[]
+  videoSessions     VideoSession[]
+
+  @@index([tenantId, organizationId, scheduledStartAt])
+  @@index([tenantId, status, scheduledStartAt])
+  @@index([tenantId, applicationId])
+  @@map("meetings")
+}
+
+model MeetingParticipant {
+  id                String              @id @default(cuid())
+  tenantId          String              @map("tenant_id")
+  meetingId         String              @map("meeting_id")
+  userId            String              @map("user_id")
+  role              ParticipantRole
+  attendanceStatus  AttendanceStatus    @default(INVITED)
+
+  joinedAt          DateTime?           @map("joined_at")
+  leftAt            DateTime?           @map("left_at")
+
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  meeting           Meeting             @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user              User                @relation(fields: [userId], references: [id])
+
+  @@unique([meetingId, userId])
+  @@index([tenantId, userId])
+  @@index([tenantId, meetingId, attendanceStatus])
+  @@map("meeting_participants")
+}
+
+model VideoSession {
+  id                String              @id @default(cuid())
+  tenantId          String              @map("tenant_id")
+  meetingId         String              @map("meeting_id")
+  provider          String              @default("livekit")
+  providerSessionId String?             @map("provider_session_id")
+  status            VideoSessionStatus  @default(CREATED)
+
+  startedAt         DateTime?           @map("started_at")
+  endedAt           DateTime?           @map("ended_at")
+  failureReason     String?             @map("failure_reason")
+
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  meeting           Meeting             @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, meetingId, status])
+  @@map("video_sessions")
+}
+
+model MeetingEvent {
+  id                String              @id @default(cuid())
+  tenantId          String              @map("tenant_id")
+  meetingId         String              @map("meeting_id")
+  actorUserId       String?             @map("actor_user_id")
+  type              MeetingEventType
+  payloadJson       Json?               @map("payload_json")
+  correlationId     String?             @map("correlation_id")
+  createdAt         DateTime            @default(now()) @map("created_at")
+
+  meeting           Meeting             @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, meetingId, createdAt])
+  @@index([tenantId, type, createdAt])
+  @@map("meeting_events")
 }
 
 model AuditEvent {
@@ -653,14 +724,69 @@ enum ApplicationStage {
   @@map("application_stage")
 }
 
-enum MeetingStatus {
-  pending
-  accepted
-  denied
-  cancelled
-  completed
+enum VideoMeetingStatus {
+  DRAFT
+  REQUESTED
+  CONFIRMED
+  DENIED
+  RESCHEDULE_REQUESTED
+  CANCELED
+  IN_PROGRESS
+  COMPLETED
+  NO_SHOW
+  EXPIRED
 
-  @@map("meeting_status")
+  @@map("video_meeting_status")
+}
+
+enum ParticipantRole {
+  HOST
+  INTERVIEWER
+  CANDIDATE
+  OBSERVER
+  RECRUITER
+
+  @@map("participant_role")
+}
+
+enum AttendanceStatus {
+  INVITED
+  ACCEPTED
+  DECLINED
+  JOINED
+  LEFT
+  NO_SHOW
+
+  @@map("attendance_status")
+}
+
+enum VideoSessionStatus {
+  CREATED
+  ACTIVE
+  ENDED
+  FAILED
+
+  @@map("video_session_status")
+}
+
+enum MeetingEventType {
+  REQUEST_CREATED
+  REQUEST_ACCEPTED
+  REQUEST_DENIED
+  RESCHEDULE_REQUESTED
+  RESCHEDULE_ACCEPTED
+  CANCELED
+  ROOM_CREATED
+  TOKEN_ISSUED
+  PARTICIPANT_JOINED
+  PARTICIPANT_LEFT
+  MEETING_STARTED
+  MEETING_ENDED
+  NO_SHOW_MARKED
+  WEBHOOK_RECONCILED
+  ERROR
+
+  @@map("meeting_event_type")
 }
 
 enum BillingPlan {

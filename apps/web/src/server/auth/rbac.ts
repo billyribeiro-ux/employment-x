@@ -11,7 +11,7 @@ type Subjects =
   | 'Scorecard'
   | 'Conversation'
   | 'Message'
-  | 'MeetingRequest'
+  | 'Meeting'
   | 'Billing'
   | 'Notification'
   | 'FeedbackTemplate'
@@ -49,9 +49,9 @@ export function defineAbilitiesFor(ctx: TenantContext): AppAbility {
       can('update', 'Application');
       can('create', 'Scorecard');
       can('read', 'Scorecard');
-      can('create', 'MeetingRequest');
-      can('read', 'MeetingRequest');
-      can('update', 'MeetingRequest');
+      can('create', 'Meeting');
+      can('read', 'Meeting');
+      can('update', 'Meeting');
       can('create', 'Conversation');
       can('read', 'Conversation');
       can('create', 'Message');
@@ -88,8 +88,8 @@ export function defineAbilitiesFor(ctx: TenantContext): AppAbility {
       can('read', 'Conversation');
       can('create', 'Message');
       can('read', 'Message');
-      can('read', 'MeetingRequest');
-      can('update', 'MeetingRequest'); // respond
+      can('read', 'Meeting');
+      can('update', 'Meeting'); // respond
       cannot('delete', 'Job');
       cannot('create', 'Job');
       cannot('manage', 'Billing');
@@ -103,8 +103,8 @@ export function defineAbilitiesFor(ctx: TenantContext): AppAbility {
       can('read', 'Conversation');
       can('create', 'Message');
       can('read', 'Message');
-      can('read', 'MeetingRequest');
-      can('create', 'MeetingRequest');
+      can('read', 'Meeting');
+      can('create', 'Meeting');
       break;
 
     default:

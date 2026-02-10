@@ -15,25 +15,26 @@ const REMINDER_OFFSETS_MINUTES = [
 export async function scheduleRemindersForMeeting(meetingId: string): Promise<number> {
   const log = logger.child({ action: 'schedule_reminders', meetingId });
 
-  const meeting = await prisma.meetingRequest.findUnique({
+  const meeting = await prisma.meeting.findUnique({
     where: { id: meetingId },
     select: {
-      id: true, title: true, proposedAt: true, tenantId: true,
-      requesterId: true, requesteeId: true, status: true,
+      id: true, title: true, scheduledStartAt: true, tenantId: true,
+      status: true,
+      participants: { select: { userId: true } },
     },
   });
 
-  if (!meeting || meeting.status === 'cancelled' || meeting.status === 'denied') {
+  if (!meeting || ['CANCELED', 'DENIED', 'COMPLETED', 'EXPIRED'].includes(meeting.status)) {
     log.info({ meetingId, status: meeting?.status }, 'Skipping reminders for inactive meeting');
     return 0;
   }
 
   let scheduled = 0;
-  const participants = [meeting.requesterId, meeting.requesteeId];
+  const participantIds = meeting.participants.map((p: { userId: string }) => p.userId);
 
-  for (const participant of participants) {
+  for (const participant of participantIds) {
     for (const { type, offset } of REMINDER_OFFSETS_MINUTES) {
-      const reminderAt = new Date(meeting.proposedAt.getTime() - offset * 60 * 1000);
+      const reminderAt = new Date(meeting.scheduledStartAt.getTime() - offset * 60 * 1000);
 
       // Don't schedule reminders in the past
       if (reminderAt <= new Date()) continue;
@@ -99,10 +100,10 @@ export async function scanUpcomingMeetingsForReminders(): Promise<number> {
   // Find meetings in the next 25 hours that are accepted
   const cutoff = new Date(Date.now() + 25 * 60 * 60 * 1000);
 
-  const meetings = await prisma.meetingRequest.findMany({
+  const meetings = await prisma.meeting.findMany({
     where: {
-      status: 'accepted',
-      proposedAt: { gt: new Date(), lt: cutoff },
+      status: 'CONFIRMED',
+      scheduledStartAt: { gt: new Date(), lt: cutoff },
     },
     select: { id: true },
   });
