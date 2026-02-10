@@ -19,11 +19,14 @@ model User {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  organization   Organization?      @relation(fields: [organizationId], references: [id])
-  auditEvents    AuditEvent[]
-  sessions       Session[]
-  resetTokens    PasswordResetToken[]
-  memberships    OrgMembership[]
+  organization      Organization?      @relation(fields: [organizationId], references: [id])
+  auditEvents       AuditEvent[]
+  sessions          Session[]
+  resetTokens       PasswordResetToken[]
+  memberships       OrgMembership[]
+  candidateProfile  CandidateProfile?
+  jobsCreated       Job[]              @relation("JobsCreated")
+  applications      Application[]      @relation("ApplicationsSubmitted")
 
   @@map("users")
 }
@@ -39,6 +42,7 @@ model Organization {
   users       User[]
   auditEvents AuditEvent[]
   memberships OrgMembership[]
+  jobs        Job[]
 
   @@map("organizations")
 }
@@ -88,6 +92,85 @@ model OrgMembership {
   @@unique([userId, organizationId])
   @@index([organizationId])
   @@map("org_memberships")
+}
+
+model CandidateProfile {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @unique @map("user_id") @db.Uuid
+  headline       String?
+  summary        String?
+  resumeUrl      String?  @map("resume_url")
+  skills         String[] @default([])
+  experienceYears Int?    @map("experience_years")
+  locationCity   String?  @map("location_city")
+  locationState  String?  @map("location_state")
+  locationCountry String? @map("location_country")
+  remoteOnly     Boolean  @default(false) @map("remote_only")
+  salaryMin      Int?     @map("salary_min")
+  salaryMax      Int?     @map("salary_max")
+  salaryCurrency String   @default("USD") @map("salary_currency")
+  availableFrom  DateTime? @map("available_from")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("candidate_profiles")
+}
+
+model Job {
+  id              String    @id @default(uuid()) @db.Uuid
+  organizationId  String    @map("organization_id") @db.Uuid
+  createdById     String    @map("created_by_id") @db.Uuid
+  title           String
+  description     String
+  requirements    String?
+  benefits        String?
+  department      String?
+  employmentType  EmploymentType @map("employment_type")
+  experienceLevel ExperienceLevel @map("experience_level")
+  locationCity    String?   @map("location_city")
+  locationState   String?   @map("location_state")
+  locationCountry String?   @map("location_country")
+  remote          Boolean   @default(false)
+  salaryMin       Int?      @map("salary_min")
+  salaryMax       Int?      @map("salary_max")
+  salaryCurrency  String    @default("USD") @map("salary_currency")
+  skills          String[]  @default([])
+  status          JobStatus @default(draft)
+  publishedAt     DateTime? @map("published_at")
+  closedAt        DateTime? @map("closed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  createdBy       User         @relation("JobsCreated", fields: [createdById], references: [id])
+  applications    Application[]
+
+  @@index([organizationId, status])
+  @@index([status, publishedAt])
+  @@map("jobs")
+}
+
+model Application {
+  id              String            @id @default(uuid()) @db.Uuid
+  jobId           String            @map("job_id") @db.Uuid
+  candidateId     String            @map("candidate_id") @db.Uuid
+  coverLetter     String?           @map("cover_letter")
+  resumeUrl       String?           @map("resume_url")
+  stage           ApplicationStage  @default(applied)
+  withdrawnAt     DateTime?         @map("withdrawn_at")
+  rejectedAt      DateTime?         @map("rejected_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  job             Job               @relation(fields: [jobId], references: [id])
+  candidate       User              @relation("ApplicationsSubmitted", fields: [candidateId], references: [id])
+
+  @@unique([jobId, candidateId])
+  @@index([candidateId])
+  @@index([jobId, stage])
+  @@map("applications")
 }
 
 model AuditEvent {
@@ -141,4 +224,45 @@ enum OrgRole {
   viewer
 
   @@map("org_role")
+}
+
+enum EmploymentType {
+  full_time
+  part_time
+  contract
+  internship
+  temporary
+
+  @@map("employment_type")
+}
+
+enum ExperienceLevel {
+  entry
+  mid
+  senior
+  lead
+  executive
+
+  @@map("experience_level")
+}
+
+enum JobStatus {
+  draft
+  published
+  closed
+  archived
+
+  @@map("job_status")
+}
+
+enum ApplicationStage {
+  applied
+  screening
+  interview
+  offer
+  hired
+  rejected
+  withdrawn
+
+  @@map("application_stage")
 }
