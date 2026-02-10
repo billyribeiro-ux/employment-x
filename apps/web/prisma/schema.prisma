@@ -33,6 +33,8 @@ model User {
   meetingsReceived  MeetingRequest[]   @relation("MeetingRequestee")
   scorecardsGiven   Scorecard[]        @relation("ScorecardsGiven")
   savedSearches     SavedSearch[]
+  notifications     Notification[]
+  notifPreference   NotificationPreference?
 
   @@map("users")
 }
@@ -202,6 +204,42 @@ model SavedSearch {
 
   @@index([userId])
   @@map("saved_searches")
+}
+
+model Notification {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  type        String
+  title       String
+  body        String
+  resourceType String? @map("resource_type")
+  resourceId  String?  @map("resource_id")
+  readAt      DateTime? @map("read_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id              String  @id @default(uuid()) @db.Uuid
+  userId          String  @unique @map("user_id") @db.Uuid
+  emailEnabled    Boolean @default(true) @map("email_enabled")
+  pushEnabled     Boolean @default(true) @map("push_enabled")
+  jobAlerts       Boolean @default(true) @map("job_alerts")
+  applicationUpdates Boolean @default(true) @map("application_updates")
+  meetingReminders Boolean @default(true) @map("meeting_reminders")
+  chatMessages    Boolean @default(true) @map("chat_messages")
+  marketingEmails Boolean @default(false) @map("marketing_emails")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }
 
 model Job {
