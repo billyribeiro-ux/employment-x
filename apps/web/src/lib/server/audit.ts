@@ -20,6 +20,7 @@ export type AuditAction =
   | 'application.create'
   | 'application.stage_change'
   | 'application.withdraw'
+  | 'application.bulk_action'
   | 'meeting.create'
   | 'meeting.accept'
   | 'meeting.deny'

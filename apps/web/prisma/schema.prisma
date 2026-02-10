@@ -35,6 +35,7 @@ model User {
   savedSearches     SavedSearch[]
   notifications     Notification[]
   notifPreference   NotificationPreference?
+  notesAuthored     ApplicationNote[]  @relation("NotesAuthored")
 
   @@map("users")
 }
@@ -55,6 +56,7 @@ model Organization {
   employerProfile    EmployerProfile?
   feedbackTemplates  FeedbackTemplate[]
   evaluationRubrics  EvaluationRubric[]
+  jobTemplates       JobTemplate[]
 
   @@map("organizations")
 }
@@ -277,6 +279,37 @@ model EvaluationRubric {
   @@map("evaluation_rubrics")
 }
 
+model JobTemplate {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  name            String
+  description     String?
+  template        Json
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization    Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@map("job_templates")
+}
+
+model ApplicationNote {
+  id              String   @id @default(uuid()) @db.Uuid
+  applicationId   String   @map("application_id") @db.Uuid
+  authorId        String   @map("author_id") @db.Uuid
+  body            String
+  mentionedUserIds String[] @default([]) @map("mentioned_user_ids")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  application     Application @relation(fields: [applicationId], references: [id])
+  author          User        @relation("NotesAuthored", fields: [authorId], references: [id])
+
+  @@index([applicationId])
+  @@map("application_notes")
+}
+
 model Job {
   id              String    @id @default(uuid()) @db.Uuid
   organizationId  String    @map("organization_id") @db.Uuid
@@ -326,6 +359,7 @@ model Application {
   job             Job               @relation(fields: [jobId], references: [id])
   candidate       User              @relation("ApplicationsSubmitted", fields: [candidateId], references: [id])
   scorecards      Scorecard[]
+  notes           ApplicationNote[]
 
   @@unique([jobId, candidateId])
   @@index([candidateId])
