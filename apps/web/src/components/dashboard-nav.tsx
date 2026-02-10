@@ -17,12 +17,12 @@ import {
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/jobs', label: 'Jobs', icon: Briefcase },
-  { href: '/dashboard/candidates', label: 'Candidates', icon: Users },
+  { href: '/dashboard/applications', label: 'Applications', icon: Users },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
   { href: '/dashboard/scheduling', label: 'Scheduling', icon: Calendar },
   { href: '/dashboard/interviews', label: 'Interviews', icon: Video },
   { href: '/dashboard/billing', label: 'Billing', icon: CreditCard },
-  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+  { href: '/dashboard/profile', label: 'Profile', icon: Settings },
 ];
 
 export function DashboardNav() {
