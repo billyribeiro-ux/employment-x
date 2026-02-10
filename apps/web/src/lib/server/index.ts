@@ -49,3 +49,38 @@ export {
   WEBHOOK_CONFIGS,
   type WebhookVerifyOptions,
 } from './webhook';
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  authenticateRequest,
+  requestPasswordReset,
+  resetPassword,
+  verifyAccessToken,
+  type TokenPair,
+  type JwtPayload,
+  type AuthenticatedContext,
+} from './auth';
+export {
+  defineAbilitiesFor,
+  assertCan,
+  type AppAbility,
+  type RbacContext,
+} from './rbac';
+export {
+  getOrCreateSubscription,
+  getSubscriptionWithLimits,
+  changePlan,
+  checkPlanLimit,
+  PLAN_LIMITS,
+  type PlanName,
+} from './billing';
+export {
+  getFlag,
+  isEnabled,
+  setFlagOverride,
+  clearFlagOverride,
+  clearAllOverrides,
+  getAllFlags,
+  getFlagDefinitions,
+} from './flags';
