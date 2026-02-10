@@ -2,9 +2,11 @@ import { type NextRequest } from 'next/server';
 
 import { authenticateRequest } from '@/lib/server/auth';
 import { handleRouteError, successResponse, AppError } from '@/lib/server/errors';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { prisma } from '@/lib/server/db';
 
 export async function GET(req: NextRequest) {
+  return withSpan('GET /v1/admin/slo', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
 
@@ -69,4 +71,5 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }

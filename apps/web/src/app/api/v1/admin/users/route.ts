@@ -4,9 +4,11 @@ import { authenticateRequest } from '@/lib/server/auth';
 import { handleRouteError, successResponse, AppError } from '@/lib/server/errors';
 import { getCorrelationId } from '@/lib/server/correlation';
 import { writeAuditEvent } from '@/lib/server/audit';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { prisma } from '@/lib/server/db';
 
 export async function GET(req: NextRequest) {
+  return withSpan('GET /v1/admin/users', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
     if (ctx.role !== 'admin') throw new AppError('FORBIDDEN', 'Admin access required');
@@ -56,9 +58,11 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }
 
 export async function PATCH(req: NextRequest) {
+  return withSpan('PATCH /v1/admin/users', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
     if (ctx.role !== 'admin') throw new AppError('FORBIDDEN', 'Admin access required');
@@ -97,4 +101,5 @@ export async function PATCH(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }

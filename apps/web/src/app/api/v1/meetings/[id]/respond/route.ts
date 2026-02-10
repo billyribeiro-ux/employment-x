@@ -5,15 +5,20 @@ import { handleRouteError, successResponse, AppError } from '@/lib/server/errors
 import { getCorrelationId } from '@/lib/server/correlation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { writeAuditEvent } from '@/lib/server/audit';
+import { defineAbilitiesFor, assertCan } from '@/lib/server/rbac';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { withIdempotency } from '@/server/middleware/idempotency';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  return withSpan('POST /v1/meetings/[id]/respond', spanAttributes(req), async () => {
   return withIdempotency(req, async () => {
     try {
       checkRateLimit(req, 'scheduling:respond', RATE_LIMITS.scheduling);
       const { id: meetingId } = await params;
       const ctx = await authenticateRequest(req.headers.get('authorization'));
+      const ability = defineAbilitiesFor({ userId: ctx.userId, role: ctx.role, orgRole: ctx.org_role ?? undefined });
+      assertCan(ability, 'read', 'Meeting');
 
     const meeting = await prisma.meeting.findUnique({
       where: { id: meetingId },
@@ -67,5 +72,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     } catch (err) {
       return handleRouteError(req, err);
     }
+  });
   });
 }

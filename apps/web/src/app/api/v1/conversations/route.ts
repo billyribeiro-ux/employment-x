@@ -5,12 +5,17 @@ import { handleRouteError, successResponse, AppError } from '@/lib/server/errors
 import { getCorrelationId } from '@/lib/server/correlation';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
 import { writeAuditEvent } from '@/lib/server/audit';
+import { defineAbilitiesFor, assertCan } from '@/lib/server/rbac';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest) {
+  return withSpan('POST /v1/conversations', spanAttributes(req), async () => {
   try {
     checkRateLimit(req, 'chat:create', RATE_LIMITS.chat);
     const ctx = await authenticateRequest(req.headers.get('authorization'));
+    const ability = defineAbilitiesFor({ userId: ctx.userId, role: ctx.role, orgRole: ctx.org_role ?? undefined });
+    assertCan(ability, 'create', 'Conversation');
     const body = await req.json();
     const { participant_ids, subject, application_id } = body;
 
@@ -53,11 +58,15 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }
 
 export async function GET(req: NextRequest) {
+  return withSpan('GET /v1/conversations', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
+    const ability = defineAbilitiesFor({ userId: ctx.userId, role: ctx.role, orgRole: ctx.org_role ?? undefined });
+    assertCan(ability, 'read', 'Conversation');
 
     const conversations = await prisma.conversation.findMany({
       where: {
@@ -94,4 +103,5 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }

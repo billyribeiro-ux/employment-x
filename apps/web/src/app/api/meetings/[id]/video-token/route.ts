@@ -5,9 +5,11 @@ import { VideoTokenRequestSchema, VIDEO_ERROR_CODES } from '@/lib/validation/vid
 import { assertCanJoinMeeting, MeetingAccessError } from '@/server/services/meeting-access.service';
 import { issueJoinToken } from '@/server/services/video-token.service';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  return withSpan('POST /meetings/[id]/video-token', spanAttributes(req), async () => {
   try {
     checkRateLimit(req, 'video:token', RATE_LIMITS.api);
     const { id: meetingId } = await params;
@@ -56,4 +58,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       { status: 500 },
     );
   }
+  });
 }

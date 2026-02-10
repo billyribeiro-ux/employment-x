@@ -2,18 +2,22 @@ import { type NextRequest } from 'next/server';
 
 import { authenticateRequest } from '@/lib/server/auth';
 import { handleRouteError, successResponse, AppError } from '@/lib/server/errors';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { getSupportedProviders, exportToAts, importFromAts } from '@/lib/server/integrations';
 
 export async function GET(req: NextRequest) {
-  try {
-    await authenticateRequest(req.headers.get('authorization'));
-    return successResponse(req, { providers: getSupportedProviders() });
-  } catch (err) {
-    return handleRouteError(req, err);
-  }
+  return withSpan('GET /v1/integrations', spanAttributes(req), async () => {
+    try {
+      await authenticateRequest(req.headers.get('authorization'));
+      return successResponse(req, { providers: getSupportedProviders() });
+    } catch (err) {
+      return handleRouteError(req, err);
+    }
+  });
 }
 
 export async function POST(req: NextRequest) {
+  return withSpan('POST /v1/integrations', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
 
@@ -46,4 +50,5 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }

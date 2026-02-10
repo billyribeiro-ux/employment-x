@@ -2,9 +2,11 @@ import { type NextRequest } from 'next/server';
 
 import { authenticateRequest } from '@/lib/server/auth';
 import { handleRouteError, successResponse } from '@/lib/server/errors';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { prisma } from '@/lib/server/db';
 
 export async function GET(req: NextRequest) {
+  return withSpan('GET /v1/notifications', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
     const url = new URL(req.url);
@@ -39,9 +41,11 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }
 
 export async function PATCH(req: NextRequest) {
+  return withSpan('PATCH /v1/notifications', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
     const body = await req.json();
@@ -66,4 +70,5 @@ export async function PATCH(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }

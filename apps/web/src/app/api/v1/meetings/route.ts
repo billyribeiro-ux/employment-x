@@ -5,11 +5,16 @@ import { handleRouteError, successResponse, AppError } from '@/lib/server/errors
 import { getCorrelationId } from '@/lib/server/correlation';
 import { writeAuditEvent } from '@/lib/server/audit';
 import { checkUserRateLimit, RATE_LIMITS } from '@/lib/server/rate-limit';
+import { defineAbilitiesFor, assertCan } from '@/lib/server/rbac';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest) {
+  return withSpan('POST /v1/meetings', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
+    const ability = defineAbilitiesFor({ userId: ctx.userId, role: ctx.role, orgRole: ctx.org_role ?? undefined });
+    assertCan(ability, 'create', 'Meeting');
     checkUserRateLimit(ctx.userId, 'scheduling:create', RATE_LIMITS.scheduling);
 
     const body = await req.json();
@@ -78,11 +83,15 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }
 
 export async function GET(req: NextRequest) {
+  return withSpan('GET /v1/meetings', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
+    const ability = defineAbilitiesFor({ userId: ctx.userId, role: ctx.role, orgRole: ctx.org_role ?? undefined });
+    assertCan(ability, 'read', 'Meeting');
     const url = new URL(req.url);
     const status = url.searchParams.get('status');
 
@@ -105,6 +114,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

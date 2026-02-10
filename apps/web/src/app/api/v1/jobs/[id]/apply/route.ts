@@ -4,12 +4,17 @@ import { authenticateRequest } from '@/lib/server/auth';
 import { handleRouteError, successResponse, AppError } from '@/lib/server/errors';
 import { getCorrelationId } from '@/lib/server/correlation';
 import { writeAuditEvent } from '@/lib/server/audit';
+import { defineAbilitiesFor, assertCan } from '@/lib/server/rbac';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  return withSpan('POST /v1/jobs/[id]/apply', spanAttributes(req), async () => {
   try {
     const { id: jobId } = await params;
     const ctx = await authenticateRequest(req.headers.get('authorization'));
+    const ability = defineAbilitiesFor({ userId: ctx.userId, role: ctx.role, orgRole: ctx.org_role ?? undefined });
+    assertCan(ability, 'create', 'Application');
 
     if (ctx.role !== 'candidate') {
       throw new AppError('FORBIDDEN', 'Only candidates can apply to jobs');
@@ -59,4 +64,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }
