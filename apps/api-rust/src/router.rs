@@ -58,6 +58,9 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/v1/interviews/rooms/:id/token", post(modules::interviews::get_room_token))
         .route("/v1/interviews/sessions/:id/events", post(modules::interviews::send_session_event))
         .route("/v1/interviews/sessions/:id/feedback", post(modules::interviews::submit_feedback))
+        .route("/v1/meetings/:id/video-token", post(modules::interviews::issue_video_token))
+        .route("/v1/meetings/:id/interview-room", get(modules::interviews::get_interview_room))
+        .route("/v1/meetings/:id/end", post(modules::interviews::end_meeting))
         .route("/v1/billing/plans", get(modules::billing::get_plans))
         .route("/v1/billing/subscriptions", post(modules::billing::create_subscription))
         .route("/v1/billing/subscriptions/:id", patch(modules::billing::update_subscription))
@@ -71,7 +74,8 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         ));
 
     let webhook_routes = Router::new()
-        .route("/v1/billing/webhooks/stripe", post(modules::billing::stripe_webhook));
+        .route("/v1/billing/webhooks/stripe", post(modules::billing::stripe_webhook))
+        .route("/v1/video/webhook", post(modules::interviews::video_provider_webhook));
 
     Router::new()
         .merge(public_routes)

@@ -1,0 +1,112 @@
+Issue Type,Summary,Description,Priority,Epic Name,Epic Link,Parent,Assignee,Labels,Story Points,Blocks
+Epic,EX-M1-E01 Platform Spine & Security Foundation,"M1 Epic: CI, contracts, security baseline, tenancy protections, observability.",Highest,EX-M1-E01,,,,m1;platform;security,,
+Story,"[F-040] CI Quality Gates","Set up lint, typecheck, unit/integration/e2e, build, migration checks as blocking gates.",Highest,,EX-M1-E01,,Platform Lead,"m1;f-040;platform",5,
+Task,"Implement pipeline stages","Create CI stages for install, lint, typecheck, test, build.",Highest,,EX-M1-E01,,Platform Engineer,"m1;f-040;ci",3,
+Task,"Add required status checks","Protect main branch with required checks.",Highest,,EX-M1-E01,,Platform Engineer,"m1;f-040;ci",2,
+Story,"[F-146] Migration Lint Guardrails","Add migration lints for lock safety, rollback notes, index checks.",Highest,,EX-M1-E01,,Backend Lead,"m1;f-146;db",3,
+Story,"[F-142] Standard Error Envelope","All APIs return typed error envelope with code/message/correlationId.",Highest,,EX-M1-E01,,Backend Lead,"m1;f-142;api",5,
+Story,"[F-143] Correlation ID Propagation","Propagate correlation IDs through HTTP, workers, DB logs, external calls.",Highest,,EX-M1-E01,,Backend Lead,"m1;f-143;observability",5,"[F-040] CI Quality Gates"
+Story,"[F-038] OpenTelemetry Baseline","Add traces for auth, jobs, apply, chat, scheduling, billing critical spans.",Highest,,EX-M1-E01,,Platform Engineer,"m1;f-038;otel",5,"[F-143] Correlation ID Propagation"
+Story,"[F-039] Sentry Monitoring","Integrate Sentry for FE+BE with release tags and tenant-safe context.",High,,EX-M1-E01,,Platform Engineer,"m1;f-039;sentry",3,"[F-040] CI Quality Gates"
+Story,"[F-155] Tenant-safe Query Helpers","Create tenant-scoped repository helpers and ban unsafe queries.",Highest,,EX-M1-E01,,Backend Lead,"m1;f-155;tenancy",5,
+Story,"[F-156] Cross-tenant Access Test Harness","Automated security tests for cross-tenant access violations.",Highest,,EX-M1-E01,,QA Lead,"m1;f-156;security;qa",5,"[F-155] Tenant-safe Query Helpers"
+Story,"[F-200] CSRF/XSS Hardening Gates","Security scanning + middleware hardening with CI fail-on-regression.",Highest,,EX-M1-E01,,Security Engineer,"m1;f-200;security",5,"[F-040] CI Quality Gates"
+Story,"[F-202] PII Redaction in Logs/Traces","Redact sensitive fields across logs, traces, error reports.",Highest,,EX-M1-E01,,Platform Engineer,"m1;f-202;privacy",5,"[F-143] Correlation ID Propagation"
+Story,"[F-031] Append-only Audit Ledger","Immutable audit events for auth, role changes, stage transitions, billing.",Highest,,EX-M1-E01,,Backend Engineer,"m1;f-031;audit",5,"[F-155] Tenant-safe Query Helpers"
+Story,"[F-032] Rate Limiting + Abuse Controls","Per-user/per-tenant limits on auth/chat/scheduling endpoints.",Highest,,EX-M1-E01,,Backend Engineer,"m1;f-032;security",5,
+Story,"[F-049] Zero-downtime Migration Workflow","Expand-contract deployment playbook and migration checks.",High,,EX-M1-E01,,Platform Lead,"m1;f-049;db",3,"[F-146] Migration Lint Guardrails"
+Story,"[F-099] SLO Dashboard Baseline","Create latency/error/queue/reminder SLO dashboards and alerts.",High,,EX-M1-E01,,Ops Engineer,"m1;f-099;sre",3,"[F-038] OpenTelemetry Baseline"
+Epic,EX-M1-E02 Identity Tenancy and Access,"M1 Epic: auth, org model, RBAC, password reset, baseline identity workflows.",Highest,EX-M1-E02,,,,m1;identity;tenancy,,
+Story,"[F-001] User Registration","Candidate/employer registration with validation and role assignment.",Highest,,EX-M1-E02,,Backend Engineer,"m1;f-001;auth",5,"[F-142] Standard Error Envelope"
+Story,"[F-002] Login/Logout","Session lifecycle with secure cookies/tokens and logout invalidation.",Highest,,EX-M1-E02,,Backend Engineer,"m1;f-002;auth",5,"[F-001] User Registration"
+Story,"[F-151] Password Reset","Secure reset token issuance, expiry, one-time use.",High,,EX-M1-E02,,Backend Engineer,"m1;f-151;auth",3,"[F-002] Login/Logout"
+Story,"[F-003] Org Creation + Membership","Employer org creation and team membership/invite structure.",Highest,,EX-M1-E02,,Backend Lead,"m1;f-003;tenancy",5,"[F-001] User Registration"
+Story,"[F-004] RBAC Enforcement","Central policy checks for all protected routes/actions.",Highest,,EX-M1-E02,,Backend Lead,"m1;f-004;authz",8,"[F-003] Org Creation + Membership"
+Story,"[F-152] Verification Resend/Cooldown","Resend verification with cooldown and abuse limits.",Medium,,EX-M1-E02,,Backend Engineer,"m1;f-152;auth",2,"[F-001] User Registration"
+Epic,EX-M1-E03 Candidate Employer Jobs Applications,"M1 Epic: core hiring object model and first production data flow.",Highest,EX-M1-E03,,,,m1;hiring-core,,
+Story,"[F-006] Candidate Profile CRUD","Create/update candidate profile fields with validations.",Highest,,EX-M1-E03,,Frontend Lead,"m1;f-006;candidate",5,"[F-001] User Registration"
+Story,"[F-010] Employer Profile/Company Page","Employer company profile and metadata maintenance.",High,,EX-M1-E03,,Frontend Engineer,"m1;f-010;employer",3,"[F-003] Org Creation + Membership"
+Story,"[F-011] Job Create/Edit/Publish","Draft/publish/archive job posts with versioning-ready schema.",Highest,,EX-M1-E03,,Backend Engineer,"m1;f-011;jobs",8,"[F-004] RBAC Enforcement"
+Story,"[F-012] Job Listings/Search/Filter","Paged list with filters/sorting and empty/loading/error states.",Highest,,EX-M1-E03,,Frontend Engineer,"m1;f-012;jobs",5,"[F-011] Job Create/Edit/Publish"
+Story,"[F-013] Apply to Job","Candidate applies to job with duplicate-apply protections.",Highest,,EX-M1-E03,,Backend Engineer,"m1;f-013;applications",5,"[F-006] Candidate Profile CRUD"
+Story,"[F-014] Application Stage Transitions","Employer moves application stages with audit trail and idempotency.",Highest,,EX-M1-E03,,Backend Lead,"m1;f-014;pipeline",8,"[F-013] Apply to Job"
+Story,"[F-084] Candidate Status Transparency Center","Candidate sees stage, next steps, timestamps.",High,,EX-M1-E03,,Frontend Engineer,"m1;f-084;candidate-ux",3,"[F-014] Application Stage Transitions"
+Story,"[F-159] Candidate Preference Matrix","Candidate remote/hybrid/location/comp preferences.",Medium,,EX-M1-E03,,Frontend Engineer,"m1;f-159;candidate",2,"[F-006] Candidate Profile CRUD"
+Story,"[F-162] Job Freshness + Expiry","Auto-expire stale jobs and show freshness indicators.",Medium,,EX-M1-E03,,Backend Engineer,"m1;f-162;jobs",3,"[F-011] Job Create/Edit/Publish"
+Story,"[F-131] Time-to-hire Analytics Baseline","Basic funnel timing metrics for M1 reporting.",Medium,,EX-M1-E03,,Data Engineer,"m1;f-131;analytics",3,"[F-014] Application Stage Transitions"
+Epic,EX-M1-E04 Messaging and Scheduling Core,"M1 Epic: real-time communication + meeting workflows.",Highest,EX-M1-E04,,,,m1;chat;scheduling,,
+Story,"[F-016] Private Conversation Creation","Create candidate-employer conversation threads with tenant checks.",Highest,,EX-M1-E04,,Backend Engineer,"m1;f-016;chat",5,"[F-004] RBAC Enforcement"
+Story,"[F-017] Send/Receive Messages + Receipts","Persist messages, delivery/read states, realtime updates.",Highest,,EX-M1-E04,,Backend Lead,"m1;f-017;chat",8,"[F-016] Private Conversation Creation"
+Story,"[F-019] Meeting Request Creation","Create meeting request proposals with timezone support.",Highest,,EX-M1-E04,,Backend Engineer,"m1;f-019;scheduling",5,"[F-017] Send/Receive Messages + Receipts"
+Story,"[F-020] Accept Meeting","Accept request with idempotency and reminder scheduling.",Highest,,EX-M1-E04,,Backend Engineer,"m1;f-020;scheduling",5,"[F-019] Meeting Request Creation"
+Story,"[F-021] Deny Meeting","Deny request with reason and event log.",High,,EX-M1-E04,,Backend Engineer,"m1;f-021;scheduling",3,"[F-019] Meeting Request Creation"
+Story,"[F-022] Reschedule Meeting","Reschedule flow with lineage and reminder reset.",Highest,,EX-M1-E04,,Backend Lead,"m1;f-022;scheduling",8,"[F-020] Accept Meeting"
+Story,"[F-023] Reminder Engine","T-24/T-1/T-10 reminders with retry/dedupe.",Highest,,EX-M1-E04,,Backend Engineer,"m1;f-023;reminders",5,"[F-020] Accept Meeting"
+Story,"[F-030] Idempotency Middleware","Idempotency for critical writes across scheduling/billing.",Highest,,EX-M1-E04,,Backend Lead,"m1;f-030;reliability",8,"[F-142] Standard Error Envelope"
+Story,"[F-051] Availability Management","Recurring availability + exceptions.",High,,EX-M1-E04,,Frontend Engineer,"m1;f-051;scheduling",3,"[F-019] Meeting Request Creation"
+Story,"[F-052] Double-booking Conflict Detection","Reject overlapping meetings deterministically.",Highest,,EX-M1-E04,,Backend Engineer,"m1;f-052;scheduling",5,"[F-051] Availability Management"
+Story,"[F-053] Meeting Cancellation","Authorized cancellation + notification flow.",High,,EX-M1-E04,,Backend Engineer,"m1;f-053;scheduling",3,"[F-020] Accept Meeting"
+Story,"[F-075] SLA Breach Alerts","Detect stalled candidates and notify owners.",High,,EX-M1-E04,,Backend Engineer,"m1;f-075;pipeline",3,"[F-014] Application Stage Transitions"
+Story,"[F-172] Buffer Time Rules","Pre/post meeting buffers in scheduling logic.",High,,EX-M1-E04,,Backend Engineer,"m1;f-172;scheduling",3,"[F-051] Availability Management"
+Story,"[F-173] Timezone Conflict Warnings","Warn when proposals fall outside recipient hours.",High,,EX-M1-E04,,Frontend Engineer,"m1;f-173;ux",2,"[F-019] Meeting Request Creation"
+Story,"[F-185] Notification Dedupe","Dedupe event bursts between toast/center.",Medium,,EX-M1-E04,,Frontend Engineer,"m1;f-185;notifications",2,"[F-023] Reminder Engine"
+Epic,EX-M1-E05 Interview Evaluation and Decisioning,"M1 Epic: live interview launch, scorecards, structured decisions.",Highest,EX-M1-E05,,,,m1;interview;evaluation,,
+Story,"[F-024] Video Room Create/Token Issuance (Sandbox-capable)","Host creates room and participants get scoped tokens.",Highest,,EX-M1-E05,,Backend Lead,"m1;f-024;interview",8,"[F-020] Accept Meeting"
+Story,"[F-015] Scorecards + Interviewer Feedback","Structured feedback forms tied to interview sessions.",High,,EX-M1-E05,,Frontend Lead,"m1;f-015;evaluation",5,"[F-024] Video Room Create/Token Issuance (Sandbox-capable)"
+Story,"[F-071] Rubric Templates","Org-level reusable rubric templates by role.",High,,EX-M1-E05,,Backend Engineer,"m1;f-071;evaluation",3,"[F-015] Scorecards + Interviewer Feedback"
+Story,"[F-072] Post-call Action Launcher","Move stage/request follow-up/reject from post-call panel.",High,,EX-M1-E05,,Frontend Engineer,"m1;f-072;evaluation",3,"[F-015] Scorecards + Interviewer Feedback"
+Story,"[F-073] Decision Records + Evidence Links","Final decisions require reason/evidence and audit trail.",High,,EX-M1-E05,,Backend Engineer,"m1;f-073;decision",5,"[F-015] Scorecards + Interviewer Feedback"
+Epic,EX-M1-E06 Billing Entitlements and Flags,"M1 Epic: pricing, subscriptions (sandbox first), entitlement checks, safe feature rollout.",Highest,EX-M1-E06,,,,m1;billing;flags,,
+Story,"[F-027] Plan Catalog + Entitlements","Expose plan definitions and feature entitlements.",Highest,,EX-M1-E06,,Backend Engineer,"m1;f-027;billing",5,"[F-004] RBAC Enforcement"
+Story,"[F-028] Subscription Lifecycle","Create/update/cancel subscriptions with audit events.",Highest,,EX-M1-E06,,Backend Lead,"m1;f-028;billing",8,"[F-027] Plan Catalog + Entitlements"
+Story,"[F-093] Webhook Signature Verification","Validate and de-duplicate external billing webhooks.",Highest,,EX-M1-E06,,Backend Engineer,"m1;f-093;billing;security",5,"[F-028] Subscription Lifecycle"
+Story,"[F-090] Invoice History","List and access invoices securely.",High,,EX-M1-E06,,Frontend Engineer,"m1;f-090;billing",3,"[F-028] Subscription Lifecycle"
+Story,"[F-048] Feature Flags","Introduce runtime feature flags in FE/BE.",High,,EX-M1-E06,,Platform Engineer,"m1;f-048;flags",3,"[F-040] CI Quality Gates"
+Story,"[F-104] Tenant-scoped Rollout Rules","Flag targeting by tenant/plan/role.",High,,EX-M1-E06,,Platform Engineer,"m1;f-104;flags",3,"[F-048] Feature Flags"
+Story,"[F-105] Flag Provider Safe Fallback","Graceful defaults if flag service unavailable.",High,,EX-M1-E06,,Platform Engineer,"m1;f-105;flags;reliability",3,"[F-104] Tenant-scoped Rollout Rules"
+Epic,EX-M1-E07 Demo Mode and Portfolio Conversion,"M1 Epic: no-registration demo with realistic scenarios and conversion telemetry.",Highest,EX-M1-E07,,,,m1;demo;portfolio,,
+Story,"[F-036] Public Demo Entry","Visitors can launch demo without account creation.",Highest,,EX-M1-E07,,Frontend Engineer,"m1;f-036;demo",5,"[F-040] CI Quality Gates"
+Story,"[F-037] Demo Seed Data + Reset","Load realistic demo fixtures and deterministic reset.",Highest,,EX-M1-E07,,Backend Engineer,"m1;f-037;demo",5,"[F-036] Public Demo Entry"
+Story,"[F-103] Demo Guardrails","Prevent external side effects in demo (emails/payments/webhooks).",Highest,,EX-M1-E07,,Backend Lead,"m1;f-103;demo;security",5,"[F-037] Demo Seed Data + Reset"
+Story,"[F-101] Role-based Demo Tours","Guided tours by role with completion tracking.",High,,EX-M1-E07,,Frontend Engineer,"m1;f-101;demo",3,"[F-036] Public Demo Entry"
+Story,"[F-221] Employer Day-in-the-Life Scenario","Guided employer flow from search to decision.",High,,EX-M1-E07,,Frontend Engineer,"m1;f-221;demo",3,"[F-101] Role-based Demo Tours"
+Story,"[F-222] Candidate Day-in-the-Life Scenario","Guided candidate flow from profile to status tracking.",High,,EX-M1-E07,,Frontend Engineer,"m1;f-222;demo",3,"[F-101] Role-based Demo Tours"
+Story,"[F-223] Agency Ops Scenario","Guided multi-client agency workflow scenario.",Medium,,EX-M1-E07,,Frontend Engineer,"m1;f-223;demo",2,"[F-101] Role-based Demo Tours"
+Story,"[F-224] Demo→Signup Context Carryover","Preserve role/context into signup start.",High,,EX-M1-E07,,Frontend Engineer,"m1;f-224;conversion",3,"[F-036] Public Demo Entry"
+Story,"[F-190] Demo Conversion Telemetry","Track demo events and conversion funnel.",High,,EX-M1-E07,,Data Engineer,"m1;f-190;analytics",3,"[F-224] Demo→Signup Context Carryover"
+Epic,EX-M1-E08 UX Accessibility and Performance Hardening,"M1 Epic: production-grade usability and performance.",High,EX-M1-E08,,,,m1;ux;a11y;performance,,
+Story,"[F-041] WCAG AA Baseline","Keyboard navigation, landmarks, skip links, semantic headings.",Highest,,EX-M1-E08,,Frontend Lead,"m1;f-041;a11y",5,
+Story,"[F-109] Dialog Focus Trap + Return Focus","Modal/drawer focus loops and restore focus behavior.",Highest,,EX-M1-E08,,Frontend Engineer,"m1;f-109;a11y",3,"[F-041] WCAG AA Baseline"
+Story,"[F-110] ARIA Labeling + Form Associations","Ensure form controls have robust accessible names/descriptions.",Highest,,EX-M1-E08,,Frontend Engineer,"m1;f-110;a11y",3,"[F-041] WCAG AA Baseline"
+Story,"[F-111] Reduced Motion Compliance","Respect prefers-reduced-motion in all animation paths.",High,,EX-M1-E08,,Frontend Engineer,"m1;f-111;a11y;motion",3,
+Story,"[F-113] Route Suspense + Code Splitting","Implement sensible loading boundaries and route chunking.",High,,EX-M1-E08,,Frontend Engineer,"m1;f-113;performance",5,
+Story,"[F-206] Theme Token Compliance","No raw color leakage; all semantic tokens enforced.",Highest,,EX-M1-E08,,Frontend Lead,"m1;f-206;design-system",3,
+Story,"[F-207] High-contrast Accessibility Theme","Provide contrast-safe theme and toggle.",High,,EX-M1-E08,,Frontend Engineer,"m1;f-207;a11y",2,"[F-206] Theme Token Compliance"
+Story,"[F-208] Typography Token Scale","Responsive type scale and hierarchy consistency.",High,,EX-M1-E08,,Frontend Engineer,"m1;f-208;design-system",2,"[F-206] Theme Token Compliance"
+Story,"[F-210] Empty/Loading/Error Consistency","Standardized state components across all data views.",Highest,,EX-M1-E08,,Frontend Engineer,"m1;f-210;ux",3,"[F-142] Standard Error Envelope"
+Story,"[F-211] Web Vitals Budget Enforcement","Collect vitals and gate regressions with thresholds.",High,,EX-M1-E08,,Platform Engineer,"m1;f-211;performance",3,"[F-040] CI Quality Gates"
+Story,"[F-212] Image Optimization Pipeline","Responsive image transforms and placeholders.",High,,EX-M1-E08,,Frontend Engineer,"m1;f-212;performance",3,
+Story,"[F-213] Read-heavy API Caching","Cache selected list endpoints with invalidation strategy.",High,,EX-M1-E08,,Backend Engineer,"m1;f-213;performance",5,"[F-148] Redis key namespace policy and TTL registry"
+Story,"[F-214] N+1 Detection Alarms","Detect N+1 query patterns and alert on regressions.",High,,EX-M1-E08,,Backend Engineer,"m1;f-214;db;performance",3,"[F-099] SLO Dashboard Baseline"
+Epic,EX-M1-E09 Release Reliability and Go-live Gates,"M1 Epic: queue hardening, canary/rollback, launch gate controls.",Highest,EX-M1-E09,,,,m1;release;reliability,,
+Story,"[F-050] Queue Retry + DLQ Policy","Retry with backoff and dead-letter handling for reminders/notifications.",Highest,,EX-M1-E09,,Backend Engineer,"m1;f-050;queues",5,"[F-023] Reminder Engine"
+Story,"[F-150] Ops Runbooks","Runbooks for incident response and rollback classes.",High,,EX-M1-E09,,Ops Engineer,"m1;f-150;ops",3,"[F-099] SLO Dashboard Baseline"
+Story,"[F-237] Canary Releases + Auto Rollback","Canary ramp with automated rollback on SLO breach.",High,,EX-M1-E09,,Ops Engineer,"m1;f-237;release",5,"[F-099] SLO Dashboard Baseline"
+Story,"[F-239] Idempotent Recovery Verification","Post-incident replay/recovery checks for critical writes.",High,,EX-M1-E09,,Backend Engineer,"m1;f-239;recovery",3,"[F-030] Idempotency Middleware"
+Story,"[F-240] Go-live Gate Dashboard","Launch blocked until security/reliability/quality gates pass.",Highest,,EX-M1-E09,,Program Manager,"m1;f-240;launch",5,"[F-050] Queue Retry + DLQ Policy"
+Task,"Create Launch Gate Checklist","Codify required pass/fail checks for M1 launch.",Highest,,EX-M1-E09,,Program Manager,"m1;f-240;launch",2,"[F-240] Go-live Gate Dashboard"
+Task,"Dry-run Production Readiness Review","Run one full dry-run with rollback simulation and sign-off.",Highest,,EX-M1-E09,,Program Manager,"m1;f-240;launch",2,"[F-237] Canary Releases + Auto Rollback"
+Epic,EX-M1-E10 QA and Critical Path Test Pack,"M1 Epic: enforce production-grade test coverage on user-critical flows.",Highest,EX-M1-E10,,,,m1;qa;testing,,
+Story,"M1 E2E: Candidate Core Journey","Register/login -> profile -> apply -> chat -> meeting -> status view.",Highest,,EX-M1-E10,,QA Engineer,"m1;qa;e2e;candidate",8,"[F-013] Apply to Job"
+Story,"M1 E2E: Employer Core Journey","Create org -> post job -> review applicants -> chat -> schedule -> decision.",Highest,,EX-M1-E10,,QA Engineer,"m1;qa;e2e;employer",8,"[F-014] Application Stage Transitions"
+Story,"M1 E2E: Demo Journey","No-login demo entry -> scenario completion -> demo-to-signup handoff.",Highest,,EX-M1-E10,,QA Engineer,"m1;qa;e2e;demo",5,"[F-224] Demo→Signup Context Carryover"
+Story,"Security Regression Suite","Cross-tenant, RBAC denial, webhook replay, CSRF/XSS regressions.",Highest,,EX-M1-E10,,QA Lead,"m1;qa;security",8,"[F-200] CSRF/XSS Hardening Gates"
+Story,"Performance Regression Suite","Web vitals thresholds + API latency budgets for key routes.",High,,EX-M1-E10,,QA Engineer,"m1;qa;performance",5,"[F-211] Web Vitals Budget Enforcement"
+Story,"Accessibility Regression Suite","Keyboard traps, landmarks, ARIA labels, reduced motion checks.",Highest,,EX-M1-E10,,QA Engineer,"m1;qa;a11y",5,"[F-110] ARIA Labeling + Form Associations"
+Task,"Define DoD checklist template","Create reusable DoD checklist for all stories/subtasks.",High,,EX-M1-E10,,QA Lead,"m1;qa;dod",2,
+Task,"Tag all tests by feature ID","Annotate tests with f-xxx labels for traceability.",High,,EX-M1-E10,,QA Engineer,"m1;qa;traceability",2,"Define DoD checklist template"
+Epic,EX-M1-E11 Frontend SDK and Contract Integrity,"M1 Epic: typed SDK + contract test discipline between FE/BE.",High,EX-M1-E11,,,,m1;sdk;contracts,,
+Story,"[F-140] Typed SDK Generation","Generate FE SDK from contracts and enforce usage in app code.",Highest,,EX-M1-E11,,Platform Engineer,"m1;f-140;sdk",5,"[F-141] Schema contract versioning policy"
+Story,"[F-141] Contract Versioning Policy","Version contracts and define compatibility/deprecation rules.",High,,EX-M1-E11,,Platform Engineer,"m1;f-141;contracts",3,
+Story,"[F-217] Contract Test Suite","CI tests to detect FE/BE schema drift before merge.",High,,EX-M1-E11,,Platform Engineer,"m1;f-217;contracts;ci",3,"[F-140] Typed SDK Generation"
+Story,"[F-216] One-command Local Bootstrap","Dev command initializes services, schema, seed, and demo fixtures.",High,,EX-M1-E11,,Platform Engineer,"m1;f-216;dx",3,

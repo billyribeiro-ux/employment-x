@@ -1,6 +1,11 @@
 import type {
   CreateVideoRoomRequest,
+  EndMeetingRequest,
+  EndMeetingResponse,
   InterviewFeedbackRequest,
+  InterviewRoomContext,
+  IssueVideoTokenRequest,
+  IssueVideoTokenResponse,
   VideoRoom,
   VideoRoomToken,
   VideoSessionEvent,
@@ -28,5 +33,26 @@ export class InterviewsApi {
 
   async submitFeedback(sessionId: string, data: InterviewFeedbackRequest): Promise<void> {
     return this.client.post<void>(`/v1/interviews/sessions/${sessionId}/feedback`, data);
+  }
+
+  async issueVideoToken(
+    meetingId: string,
+    data?: IssueVideoTokenRequest,
+  ): Promise<IssueVideoTokenResponse> {
+    return this.client.post<IssueVideoTokenResponse>(
+      `/v1/meetings/${meetingId}/video-token`,
+      data ?? {},
+    );
+  }
+
+  async getInterviewRoom(meetingId: string): Promise<InterviewRoomContext> {
+    return this.client.get<InterviewRoomContext>(`/v1/meetings/${meetingId}/interview-room`);
+  }
+
+  async endMeeting(meetingId: string, data?: EndMeetingRequest): Promise<EndMeetingResponse> {
+    return this.client.post<EndMeetingResponse>(
+      `/v1/meetings/${meetingId}/end`,
+      data ?? { reason: 'manual_end' },
+    );
   }
 }
