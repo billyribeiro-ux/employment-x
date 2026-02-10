@@ -32,6 +32,7 @@ model User {
   meetingsRequested MeetingRequest[]   @relation("MeetingRequester")
   meetingsReceived  MeetingRequest[]   @relation("MeetingRequestee")
   scorecardsGiven   Scorecard[]        @relation("ScorecardsGiven")
+  savedSearches     SavedSearch[]
 
   @@map("users")
 }
@@ -44,11 +45,12 @@ model Organization {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  users         User[]
-  auditEvents   AuditEvent[]
-  memberships   OrgMembership[]
-  jobs          Job[]
-  subscriptions Subscription[]
+  users           User[]
+  auditEvents     AuditEvent[]
+  memberships     OrgMembership[]
+  jobs            Job[]
+  subscriptions   Subscription[]
+  employerProfile EmployerProfile?
 
   @@map("organizations")
 }
@@ -159,6 +161,47 @@ model CandidateProfile {
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("candidate_profiles")
+}
+
+model EmployerProfile {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @unique @map("organization_id") @db.Uuid
+  logoUrl         String?  @map("logo_url")
+  coverImageUrl   String?  @map("cover_image_url")
+  tagline         String?
+  description     String?
+  industry        String?
+  companySize     String?  @map("company_size")
+  foundedYear     Int?     @map("founded_year")
+  websiteUrl      String?  @map("website_url")
+  linkedinUrl     String?  @map("linkedin_url")
+  headquarters    String?
+  techStack       String[] @default([]) @map("tech_stack")
+  benefits        String[] @default([])
+  culture         String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("employer_profiles")
+}
+
+model SavedSearch {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  name            String
+  filters         Json
+  alertEnabled    Boolean  @default(false) @map("alert_enabled")
+  alertFrequency  String?  @map("alert_frequency")
+  lastAlertedAt   DateTime? @map("last_alerted_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("saved_searches")
 }
 
 model Job {
