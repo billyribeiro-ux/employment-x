@@ -5,9 +5,11 @@ import { handleRouteError, successResponse, AppError } from '@/lib/server/errors
 import { getCorrelationId } from '@/lib/server/correlation';
 import { writeAuditEvent } from '@/lib/server/audit';
 import { defineAbilitiesFor, assertCan } from '@/lib/server/rbac';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest) {
+  return withSpan('POST /v1/jobs', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
     const ability = defineAbilitiesFor({ userId: ctx.userId, role: ctx.role, orgRole: ctx.org_role ?? undefined });
@@ -60,9 +62,11 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }
 
 export async function GET(req: NextRequest) {
+  return withSpan('GET /v1/jobs', spanAttributes(req), async () => {
   try {
     const url = new URL(req.url);
     const status = url.searchParams.get('status') ?? 'published';
@@ -101,6 +105,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

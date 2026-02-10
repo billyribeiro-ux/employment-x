@@ -5,9 +5,11 @@ import { handleRouteError, successResponse, AppError } from '@/lib/server/errors
 import { getCorrelationId } from '@/lib/server/correlation';
 import { writeAuditEvent } from '@/lib/server/audit';
 import { defineAbilitiesFor, assertCan } from '@/lib/server/rbac';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  return withSpan('POST /v1/applications/[id]/scorecards', spanAttributes(req), async () => {
   try {
     const { id: applicationId } = await params;
     const ctx = await authenticateRequest(req.headers.get('authorization'));
@@ -81,9 +83,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  return withSpan('GET /v1/applications/[id]/scorecards', spanAttributes(req), async () => {
   try {
     const { id: applicationId } = await params;
     const ctx = await authenticateRequest(req.headers.get('authorization'));
@@ -127,4 +131,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }

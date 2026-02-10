@@ -3,9 +3,11 @@ import { type NextRequest } from 'next/server';
 import { authenticateRequest } from '@/lib/server/auth';
 import { handleRouteError, successResponse, AppError } from '@/lib/server/errors';
 import { defineAbilitiesFor, assertCan } from '@/lib/server/rbac';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest) {
+  return withSpan('POST /v1/feedback-templates', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
     const ability = defineAbilitiesFor({ userId: ctx.userId, role: ctx.role, orgRole: ctx.org_role ?? undefined });
@@ -37,9 +39,11 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }
 
 export async function GET(req: NextRequest) {
+  return withSpan('GET /v1/feedback-templates', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
 
@@ -56,6 +60,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

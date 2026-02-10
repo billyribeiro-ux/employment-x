@@ -5,9 +5,11 @@ import { handleRouteError, successResponse, AppError } from '@/lib/server/errors
 import { getCorrelationId } from '@/lib/server/correlation';
 import { writeAuditEvent } from '@/lib/server/audit';
 import { defineAbilitiesFor, assertCan } from '@/lib/server/rbac';
+import { withSpan, spanAttributes } from '@/lib/server/tracing';
 import { prisma } from '@/lib/server/db';
 
 export async function POST(req: NextRequest) {
+  return withSpan('POST /v1/applications/bulk', spanAttributes(req), async () => {
   try {
     const ctx = await authenticateRequest(req.headers.get('authorization'));
     const ability = defineAbilitiesFor({ userId: ctx.userId, role: ctx.role, orgRole: ctx.org_role ?? undefined });
@@ -95,4 +97,5 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return handleRouteError(req, err);
   }
+  });
 }
