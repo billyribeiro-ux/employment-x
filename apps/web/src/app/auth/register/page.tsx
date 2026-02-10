@@ -11,7 +11,7 @@ import { setTokens } from '@/store/slices/auth';
 export default function RegisterPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [form, setForm] = useState({ email: '', password: '', firstName: '', lastName: '', role: 'candidate' });
+  const [form, setForm] = useState({ email: '', password: '', firstName: '', lastName: '', role: 'candidate' as 'candidate' | 'employer' });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 

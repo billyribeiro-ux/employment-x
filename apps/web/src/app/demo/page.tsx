@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Briefcase, User, Building2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-import { getApiClient, setApiToken } from '@/lib/api';
+import { setApiToken, API_BASE_URL } from '@/lib/api';
 import { useAppDispatch } from '@/lib/hooks';
 import { setTokens, setUser } from '@/store/slices/auth';
 
@@ -47,8 +47,7 @@ export default function DemoPage() {
     setLoading(role);
 
     try {
-      const client = getApiClient();
-      const response = await fetch(`${client.baseUrl}/v1/demo/start`, {
+      const response = await fetch(`${API_BASE_URL}/v1/demo/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role }),

@@ -31,12 +31,12 @@ export class KeyboardEngine {
   private handlers: Map<string, ShortcutHandler> = new Map();
   private sequenceState: SequenceState = { keys: [], timer: null };
   private activeScope: 'global' | 'page' | 'modal' = 'global';
-  private dispatch: AppDispatch | null = null;
+  private _dispatch: AppDispatch | null = null;
   private telemetryCallback: ((action: string, keys: string) => void) | null = null;
   private boundKeyDown: ((e: KeyboardEvent) => void) | null = null;
 
   setDispatch(dispatch: AppDispatch): void {
-    this.dispatch = dispatch;
+    this._dispatch = dispatch;
   }
 
   setTelemetryCallback(cb: (action: string, keys: string) => void): void {
@@ -66,8 +66,8 @@ export class KeyboardEngine {
 
     for (let i = 0; i < enabled.length; i++) {
       for (let j = i + 1; j < enabled.length; j++) {
-        const a = enabled[i];
-        const b = enabled[j];
+        const a = enabled[i]!;
+        const b = enabled[j]!;
 
         if (a.scope !== b.scope) continue;
 
@@ -179,6 +179,8 @@ export class KeyboardEngine {
     if (this.telemetryCallback) {
       this.telemetryCallback(binding.action, binding.keys);
     }
+
+    void this._dispatch;
   }
 
   private resetSequence(): void {

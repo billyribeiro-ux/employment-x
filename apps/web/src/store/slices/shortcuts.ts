@@ -2,7 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 
 import type { PayloadAction } from '@reduxjs/toolkit';
 
-interface ShortcutBinding {
+export interface ShortcutBinding {
   id: string;
   action: string;
   label: string;
@@ -13,7 +13,7 @@ interface ShortcutBinding {
   enabled: boolean;
 }
 
-interface ShortcutsState {
+export interface ShortcutsState {
   profileId: string | null;
   bindings: ShortcutBinding[];
   commandPaletteOpen: boolean;

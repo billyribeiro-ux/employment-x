@@ -86,7 +86,7 @@ export class ApiClient {
     const response = await fetch(`${this.config.baseUrl}${path}`, {
       method: 'POST',
       headers: await this.headers(extraHeaders),
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body !== undefined ? JSON.stringify(body) : null,
     });
 
     return this.handleResponse<T>(response);

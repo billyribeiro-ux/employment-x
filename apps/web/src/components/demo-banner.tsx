@@ -43,7 +43,7 @@ export function DemoBannerGuard({ children }: { children: React.ReactNode }) {
     const token = state.auth.accessToken;
     if (!token) return false;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = JSON.parse(atob(token.split('.')[1] ?? ''));
       return payload.email?.endsWith('@employmentx.local') ?? false;
     } catch {
       return false;
