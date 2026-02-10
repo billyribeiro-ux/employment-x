@@ -44,12 +44,50 @@ model Organization {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  users       User[]
-  auditEvents AuditEvent[]
-  memberships OrgMembership[]
-  jobs        Job[]
+  users         User[]
+  auditEvents   AuditEvent[]
+  memberships   OrgMembership[]
+  jobs          Job[]
+  subscriptions Subscription[]
 
   @@map("organizations")
+}
+
+model Subscription {
+  id                 String             @id @default(uuid()) @db.Uuid
+  organizationId     String             @map("organization_id") @db.Uuid
+  stripeCustomerId   String?            @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?          @unique @map("stripe_subscription_id")
+  plan               BillingPlan        @default(free)
+  status             SubscriptionStatus @default(active)
+  currentPeriodStart DateTime?          @map("current_period_start")
+  currentPeriodEnd   DateTime?          @map("current_period_end")
+  cancelAtPeriodEnd  Boolean            @default(false) @map("cancel_at_period_end")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  organization       Organization       @relation(fields: [organizationId], references: [id])
+  billingEvents      BillingEvent[]
+
+  @@index([organizationId])
+  @@map("subscriptions")
+}
+
+model BillingEvent {
+  id              String   @id @default(uuid()) @db.Uuid
+  subscriptionId  String   @map("subscription_id") @db.Uuid
+  type            String
+  stripeEventId   String?  @unique @map("stripe_event_id")
+  amount          Int?
+  currency        String?
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@index([subscriptionId])
+  @@index([stripeEventId])
+  @@map("billing_events")
 }
 
 model Session {
@@ -376,4 +414,22 @@ enum MeetingStatus {
   completed
 
   @@map("meeting_status")
+}
+
+enum BillingPlan {
+  free
+  starter
+  professional
+  enterprise
+
+  @@map("billing_plan")
+}
+
+enum SubscriptionStatus {
+  active
+  past_due
+  cancelled
+  trialing
+
+  @@map("subscription_status")
 }
