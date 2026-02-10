@@ -1,132 +1,115 @@
 'use client';
 
-import React, { useState, useCallback, useReducer } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useInterviewRoomBootstrap } from '@/lib/hooks/useInterviewRoomBootstrap';
-import { useIssueVideoToken } from '@/lib/hooks/useIssueVideoToken';
 import { useEndMeeting } from '@/lib/hooks/useEndMeeting';
+import { useLiveKitRoom } from '@/lib/hooks/useLiveKitRoom';
 import { PreJoinPanel } from './PreJoinPanel';
 import { InCallControls } from './InCallControls';
 import { ConnectionBanner } from './ConnectionBanner';
 
-type RoomState =
-  | 'idle'
-  | 'loadingBootstrap'
-  | 'prejoin'
-  | 'tokenIssuing'
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'ending'
-  | 'ended'
-  | 'failed';
-
-type RoomAction =
-  | { type: 'BOOTSTRAP_LOADED' }
-  | { type: 'BOOTSTRAP_FAILED' }
-  | { type: 'JOIN_REQUESTED' }
-  | { type: 'TOKEN_RECEIVED' }
-  | { type: 'TOKEN_FAILED' }
-  | { type: 'CONNECTED' }
-  | { type: 'RECONNECTING' }
-  | { type: 'RECONNECTED' }
-  | { type: 'ENDING' }
-  | { type: 'ENDED' }
-  | { type: 'FAILED'; error: string }
-  | { type: 'RETRY' };
-
-function roomReducer(state: RoomState, action: RoomAction): RoomState {
-  switch (action.type) {
-    case 'BOOTSTRAP_LOADED': return 'prejoin';
-    case 'BOOTSTRAP_FAILED': return 'failed';
-    case 'JOIN_REQUESTED': return 'tokenIssuing';
-    case 'TOKEN_RECEIVED': return 'connecting';
-    case 'TOKEN_FAILED': return 'failed';
-    case 'CONNECTED': return 'connected';
-    case 'RECONNECTING': return 'reconnecting';
-    case 'RECONNECTED': return 'connected';
-    case 'ENDING': return 'ending';
-    case 'ENDED': return 'ended';
-    case 'FAILED': return 'failed';
-    case 'RETRY': return 'idle';
-    default: return state;
-  }
-}
-
 export interface InterviewRoomProps {
   meetingId: string;
-  currentUserId: string;
+  livekitUrl: string;
+  currentUserId?: string;
   displayName: string;
   onMeetingEnded?: () => void;
 }
 
-export function InterviewRoom({ meetingId, currentUserId: _currentUserId, displayName, onMeetingEnded }: InterviewRoomProps) {
-  const [roomState, dispatch] = useReducer(roomReducer, 'idle');
+export function InterviewRoom({
+  meetingId,
+  livekitUrl,
+  displayName,
+  onMeetingEnded,
+}: InterviewRoomProps) {
+  const [phase, setPhase] = useState<'loading' | 'prejoin' | 'incall' | 'ended' | 'failed'>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
 
   const bootstrap = useInterviewRoomBootstrap(meetingId);
-  const issueToken = useIssueVideoToken(meetingId);
   const endMeetingMutation = useEndMeeting(meetingId);
 
+  const lk = useLiveKitRoom({
+    meetingId,
+    livekitUrl,
+    onConnected: () => setPhase('incall'),
+    onDisconnected: () => {
+      if (phase !== 'ended') setPhase('ended');
+      onMeetingEnded?.();
+    },
+    onError: (err) => {
+      setErrorMessage(err.message);
+      setPhase('failed');
+    },
+  });
+
   // Transition to prejoin when bootstrap loads
-  React.useEffect(() => {
-    if (bootstrap.data && roomState === 'idle') {
-      dispatch({ type: 'BOOTSTRAP_LOADED' });
+  useEffect(() => {
+    if (bootstrap.data && phase === 'loading') {
+      setPhase('prejoin');
     }
-    if (bootstrap.error && roomState === 'idle') {
+    if (bootstrap.error && phase === 'loading') {
       setErrorMessage(bootstrap.error.message);
-      dispatch({ type: 'BOOTSTRAP_FAILED' });
+      setPhase('failed');
     }
-  }, [bootstrap.data, bootstrap.error, roomState]);
+  }, [bootstrap.data, bootstrap.error, phase]);
 
-  const handleJoin = useCallback(async (_opts: { audioOnly: boolean }) => {
-    dispatch({ type: 'JOIN_REQUESTED' });
-    try {
-      const tokenData = await issueToken.mutateAsync({
-        device: { kind: 'browser', userAgent: navigator.userAgent },
-        capabilities: { canPublish: true, canSubscribe: true, canPublishData: true },
-      });
-
-      dispatch({ type: 'TOKEN_RECEIVED' });
-
-      // In production, connect to LiveKit here using tokenData.token
-      // For now, simulate connection
-      void tokenData;
-      setTimeout(() => dispatch({ type: 'CONNECTED' }), 1000);
-    } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Failed to get token');
-      dispatch({ type: 'TOKEN_FAILED' });
+  // Sync LiveKit connection state → local mute/camera/screenshare state
+  useEffect(() => {
+    if (lk.room) {
+      setIsMuted(!lk.room.localParticipant.isMicrophoneEnabled);
+      setIsCameraOff(!lk.room.localParticipant.isCameraEnabled);
     }
-  }, [issueToken]);
+  }, [lk.room, lk.connectionState]);
+
+  const handleJoin = useCallback(async () => {
+    await lk.join();
+  }, [lk]);
+
+  const handleToggleMute = useCallback(async () => {
+    await lk.toggleMic();
+    setIsMuted((v) => !v);
+  }, [lk]);
+
+  const handleToggleCamera = useCallback(async () => {
+    await lk.toggleCamera();
+    setIsCameraOff((v) => !v);
+  }, [lk]);
+
+  const handleToggleScreenShare = useCallback(async () => {
+    await lk.toggleScreenShare();
+    setIsScreenSharing((v) => !v);
+  }, [lk]);
+
+  const handleLeave = useCallback(async () => {
+    await lk.leave();
+    setPhase('ended');
+    onMeetingEnded?.();
+  }, [lk, onMeetingEnded]);
 
   const handleEndMeeting = useCallback(async () => {
-    dispatch({ type: 'ENDING' });
     try {
       await endMeetingMutation.mutateAsync({ reason: 'interview_complete' });
-      dispatch({ type: 'ENDED' });
+      await lk.leave();
+      setPhase('ended');
       onMeetingEnded?.();
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'Failed to end meeting');
-      dispatch({ type: 'FAILED', error: 'end_failed' });
+      setPhase('failed');
     }
-  }, [endMeetingMutation, onMeetingEnded]);
-
-  const handleLeave = useCallback(() => {
-    dispatch({ type: 'ENDED' });
-    onMeetingEnded?.();
-  }, [onMeetingEnded]);
+  }, [endMeetingMutation, lk, onMeetingEnded]);
 
   const handleRetry = useCallback(() => {
     setErrorMessage(null);
-    dispatch({ type: 'RETRY' });
+    setPhase('loading');
     bootstrap.refetch();
   }, [bootstrap]);
 
   // --- Render ---
 
-  if (bootstrap.isLoading || roomState === 'idle') {
+  if (phase === 'loading') {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900" role="status">
         <div className="flex flex-col items-center gap-3">
@@ -137,12 +120,12 @@ export function InterviewRoom({ meetingId, currentUserId: _currentUserId, displa
     );
   }
 
-  if (roomState === 'failed') {
+  if (phase === 'failed') {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-900" role="alert">
         <div className="rounded-xl bg-red-50 p-6 text-center dark:bg-red-900/20">
           <h2 className="text-lg font-bold text-red-700 dark:text-red-400">Connection Error</h2>
-          <p className="mt-2 text-sm text-red-600 dark:text-red-300">{errorMessage ?? 'An unexpected error occurred.'}</p>
+          <p className="mt-2 text-sm text-red-600 dark:text-red-300">{errorMessage ?? lk.error ?? 'An unexpected error occurred.'}</p>
           <button
             onClick={handleRetry}
             className="mt-4 rounded-lg bg-red-600 px-6 py-2 text-sm font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400"
@@ -155,7 +138,7 @@ export function InterviewRoom({ meetingId, currentUserId: _currentUserId, displa
     );
   }
 
-  if (roomState === 'ended') {
+  if (phase === 'ended') {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-gray-900">
         <div className="rounded-xl bg-green-50 p-8 text-center dark:bg-green-900/20">
@@ -166,7 +149,7 @@ export function InterviewRoom({ meetingId, currentUserId: _currentUserId, displa
     );
   }
 
-  if (roomState === 'prejoin' && bootstrap.data) {
+  if (phase === 'prejoin' && bootstrap.data) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <PreJoinPanel
@@ -174,22 +157,22 @@ export function InterviewRoom({ meetingId, currentUserId: _currentUserId, displa
           displayName={displayName}
           scheduledStartAt={bootstrap.data.meeting.scheduledStartAt}
           canJoin={bootstrap.data.permissions.canJoin}
-          isLoading={roomState === 'prejoin' && issueToken.isPending}
+          isLoading={lk.connectionState === 'loading' || lk.connectionState === 'connecting'}
           onJoin={handleJoin}
         />
       </div>
     );
   }
 
-  // Connected / tokenIssuing / connecting states
-  const connectionState =
-    roomState === 'connecting' || roomState === 'tokenIssuing' ? 'connecting' :
-    roomState === 'reconnecting' ? 'reconnecting' :
-    roomState === 'connected' ? 'connected' : 'idle';
+  // In-call state
+  const bannerState =
+    lk.connectionState === 'connecting' || lk.connectionState === 'loading' ? 'connecting' as const :
+    lk.connectionState === 'reconnecting' ? 'reconnecting' as const :
+    lk.connectionState === 'connected' ? 'connected' as const : 'idle' as const;
 
   return (
     <div className="flex h-screen flex-col bg-gray-900">
-      <ConnectionBanner state={connectionState} onRetry={handleRetry} />
+      <ConnectionBanner state={bannerState} onRetry={handleRetry} />
 
       {/* Video grid area */}
       <div className="flex flex-1 items-center justify-center p-4">
@@ -214,9 +197,9 @@ export function InterviewRoom({ meetingId, currentUserId: _currentUserId, displa
           isMuted={isMuted}
           isCameraOff={isCameraOff}
           isScreenSharing={isScreenSharing}
-          onToggleMute={() => setIsMuted((v) => !v)}
-          onToggleCamera={() => setIsCameraOff((v) => !v)}
-          onToggleScreenShare={() => setIsScreenSharing((v) => !v)}
+          onToggleMute={handleToggleMute}
+          onToggleCamera={handleToggleCamera}
+          onToggleScreenShare={handleToggleScreenShare}
           onLeave={handleLeave}
           onEnd={handleEndMeeting}
           canEnd={bootstrap.data?.permissions.canEnd ?? false}

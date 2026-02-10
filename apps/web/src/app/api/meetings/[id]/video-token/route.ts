@@ -25,13 +25,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
     const displayName = user ? `${user.firstName} ${user.lastName}` : ctx.userId;
 
+    const correlationId = req.headers.get('x-correlation-id') ?? crypto.randomUUID();
+    const roomName = meeting.providerRoomName ?? `t_${ctx.tenantId}_m_${meetingId}`;
+
     const tokenResponse = await issueJoinToken({
       meetingId,
       tenantId: ctx.tenantId,
       userId: ctx.userId,
       role: participant.role,
       displayName,
-      providerRoomName: meeting.providerRoomName ?? `t_${ctx.tenantId}_m_${meetingId}`,
+      providerRoomName: roomName,
+      correlationId,
+      canPublish: parsed.data.capabilities?.canPublish ?? true,
+      canSubscribe: parsed.data.capabilities?.canSubscribe ?? true,
+      canPublishData: parsed.data.capabilities?.canPublishData ?? true,
     });
 
     return NextResponse.json(tokenResponse);

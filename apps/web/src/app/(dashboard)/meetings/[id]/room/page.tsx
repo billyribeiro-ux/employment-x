@@ -1,20 +1,21 @@
-'use client';
-
-import React, { use } from 'react';
 import { InterviewRoom } from '@/components/interview/InterviewRoom';
+import { getEnv } from '@/lib/env';
 
-export default function InterviewRoomPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: meetingId } = use(params);
-
-  // In production, these would come from session/auth context
-  const currentUserId = 'current-user';
-  const displayName = 'Current User';
+export default async function InterviewRoomPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id: meetingId } = await params;
+  const env = getEnv();
 
   return (
-    <InterviewRoom
-      meetingId={meetingId}
-      currentUserId={currentUserId}
-      displayName={displayName}
-    />
+    <main className="h-screen">
+      <InterviewRoom
+        meetingId={meetingId}
+        livekitUrl={env.LIVEKIT_URL}
+        displayName="Current User"
+      />
+    </main>
   );
 }

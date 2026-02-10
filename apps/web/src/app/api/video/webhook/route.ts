@@ -1,29 +1,27 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { ProviderWebhookEventSchema } from '@/lib/validation/video';
-import { verifyWebhookSignature, handleProviderEvent } from '@/server/services/video-webhook.service';
+import { verifyAndParseEvent, handleProviderEvent } from '@/server/services/video-webhook.service';
 
 export async function POST(req: NextRequest) {
+  const correlationId = req.headers.get('x-correlation-id') ?? crypto.randomUUID();
+
   try {
+    const authorization = req.headers.get('authorization');
     const rawBody = await req.text();
-    const signature = req.headers.get('authorization') ?? req.headers.get('x-webhook-signature') ?? '';
 
-    if (!verifyWebhookSignature(rawBody, signature)) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-    }
+    const normalizedEvent = await verifyAndParseEvent(rawBody, authorization);
+    const result = await handleProviderEvent(normalizedEvent, correlationId);
 
-    const body = JSON.parse(rawBody);
-    const parsed = ProviderWebhookEventSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid event payload', details: parsed.error.flatten() }, { status: 400 });
-    }
-
-    const result = await handleProviderEvent(parsed.data);
-    return NextResponse.json({ ok: true, processed: result.processed });
-  } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Webhook processing failed' },
-      { status: 500 },
+      { ok: true, processed: result.processed },
+      { status: 200, headers: { 'x-correlation-id': correlationId } },
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Webhook processing failed';
+    const status = message.includes('WEBHOOK_SIGNATURE_INVALID') ? 401 : 500;
+    return NextResponse.json(
+      { error: message },
+      { status, headers: { 'x-correlation-id': correlationId } },
     );
   }
 }

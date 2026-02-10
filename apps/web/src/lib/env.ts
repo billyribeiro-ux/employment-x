@@ -32,6 +32,12 @@ const envSchema = z.object({
   DEMO_SESSION_TTL_MINUTES: z.string().transform(Number).default('60'),
   DEMO_MAX_SESSIONS: z.string().transform(Number).default('100'),
 
+  // LiveKit (Video Interviews)
+  LIVEKIT_URL: z.string().default('wss://localhost:7880'),
+  LIVEKIT_API_KEY: z.string().default('devkey'),
+  LIVEKIT_API_SECRET: z.string().default('devsecret'),
+  LIVEKIT_WEBHOOK_SECRET: z.string().default('devwebhooksecret'),
+
   // App
   APP_VERSION: z.string().default('0.0.0'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
