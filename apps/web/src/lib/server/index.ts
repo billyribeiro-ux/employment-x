@@ -17,3 +17,28 @@ export {
   createTenantRepository,
   type TenantContext,
 } from './tenancy';
+export { getTracer, withSpan, spanAttributes } from './tracing';
+export { initSentry, captureError } from './sentry';
+export {
+  validateCsrfToken,
+  withSecurityHeaders,
+  sanitizeHtml,
+  validateOrigin,
+} from './security';
+export {
+  redactPiiFromObject,
+  redactPiiFromString,
+  safeLogContext,
+  redactHeaders,
+} from './pii';
+export {
+  writeAuditEvent,
+  getAuditTrail,
+  type AuditAction,
+  type AuditEntry,
+} from './audit';
+export {
+  checkRateLimit,
+  checkUserRateLimit,
+  RATE_LIMITS,
+} from './rate-limit';
