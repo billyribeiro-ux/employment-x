@@ -14,7 +14,6 @@ export default async function InterviewRoomPage({
       <InterviewRoom
         meetingId={meetingId}
         livekitUrl={env.LIVEKIT_URL}
-        displayName="Current User"
       />
     </main>
   );

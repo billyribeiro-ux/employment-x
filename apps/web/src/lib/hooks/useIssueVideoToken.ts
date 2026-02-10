@@ -1,25 +1,63 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
-import { type VideoTokenResponse, type VideoTokenRequest } from '@/lib/validation/video';
 
-export function useIssueVideoToken(meetingId: string) {
-  return useMutation<VideoTokenResponse, Error, VideoTokenRequest>({
-    mutationFn: async (request) => {
+export type IssueVideoTokenInput = {
+  meetingId: string;
+  capabilities?: {
+    canPublish?: boolean;
+    canSubscribe?: boolean;
+    canPublishData?: boolean;
+  };
+};
+
+export type IssueVideoTokenResponse = {
+  meetingId: string;
+  roomName: string;
+  token: string;
+  expiresAt: string;
+  participant: {
+    userId: string;
+    role: string;
+    displayName: string;
+  };
+  capabilities: {
+    canPublish: boolean;
+    canSubscribe: boolean;
+    canPublishData: boolean;
+  };
+};
+
+export function useIssueVideoToken() {
+  return useMutation<IssueVideoTokenResponse, Error, IssueVideoTokenInput>({
+    mutationFn: async ({ meetingId, capabilities }) => {
       const res = await fetch(`/api/meetings/${meetingId}/video-token`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'content-type': 'application/json',
           'x-correlation-id': crypto.randomUUID(),
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify({
+          device: {
+            kind: 'browser',
+            userAgent: navigator.userAgent,
+          },
+          capabilities: {
+            canPublish: capabilities?.canPublish ?? true,
+            canSubscribe: capabilities?.canSubscribe ?? true,
+            canPublishData: capabilities?.canPublishData ?? true,
+          },
+        }),
       });
+
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message ?? body.error ?? `Token issue failed (${res.status})`);
+        const err = json?.['error'] as Record<string, string> | undefined;
+        throw new Error(err?.['message'] ?? 'Failed to issue video token');
       }
-      return res.json();
+
+      return json as unknown as IssueVideoTokenResponse;
     },
-    retry: 1,
   });
 }

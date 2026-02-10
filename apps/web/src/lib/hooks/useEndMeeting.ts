@@ -1,29 +1,46 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { type EndMeetingResponse, type EndMeetingRequest } from '@/lib/validation/video';
 
-export function useEndMeeting(meetingId: string) {
-  const queryClient = useQueryClient();
+type EndMeetingInput = {
+  meetingId: string;
+  reason?: string;
+};
 
-  return useMutation<EndMeetingResponse, Error, EndMeetingRequest>({
-    mutationFn: async (request) => {
+type EndMeetingResponse = {
+  meetingId: string;
+  status: 'COMPLETED';
+  endedAt: string;
+};
+
+export function useEndMeeting() {
+  const qc = useQueryClient();
+
+  return useMutation<EndMeetingResponse, Error, EndMeetingInput>({
+    mutationFn: async ({ meetingId, reason }) => {
       const res = await fetch(`/api/meetings/${meetingId}/end`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'content-type': 'application/json',
           'x-correlation-id': crypto.randomUUID(),
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify({
+          reason: reason ?? 'manual_end',
+        }),
       });
+
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? `End meeting failed (${res.status})`);
+        const err = json?.['error'] as Record<string, string> | undefined;
+        throw new Error(err?.['message'] ?? 'Failed to end meeting');
       }
-      return res.json();
+
+      return json as unknown as EndMeetingResponse;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['interview-room', meetingId] });
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['meeting', vars.meetingId, 'interview-room-bootstrap'] });
+      qc.invalidateQueries({ queryKey: ['meeting', vars.meetingId] });
     },
   });
 }
