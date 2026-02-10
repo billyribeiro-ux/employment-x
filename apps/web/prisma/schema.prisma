@@ -36,6 +36,8 @@ model User {
   notifications     Notification[]
   notifPreference   NotificationPreference?
   notesAuthored     ApplicationNote[]  @relation("NotesAuthored")
+  stageChanges      ApplicationStageEvent[] @relation("StageChanges")
+  demoSessions      DemoSession[]
 
   @@map("users")
 }
@@ -76,6 +78,7 @@ model Subscription {
 
   organization       Organization       @relation(fields: [organizationId], references: [id])
   billingEvents      BillingEvent[]
+  invoices           Invoice[]
 
   @@index([organizationId])
   @@map("subscriptions")
@@ -360,6 +363,7 @@ model Application {
   candidate       User              @relation("ApplicationsSubmitted", fields: [candidateId], references: [id])
   scorecards      Scorecard[]
   notes           ApplicationNote[]
+  stageEvents     ApplicationStageEvent[]
 
   @@unique([jobId, candidateId])
   @@index([candidateId])
@@ -482,6 +486,99 @@ model AuditEvent {
   @@index([action])
   @@index([correlationId])
   @@map("audit_events")
+}
+
+model Plan {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @unique
+  displayName     String   @map("display_name")
+  priceMonthly    Int      @map("price_monthly")
+  priceYearly     Int      @map("price_yearly")
+  currency        String   @default("USD")
+  jobLimit        Int      @default(-1) @map("job_limit")
+  memberLimit     Int      @default(-1) @map("member_limit")
+  features        Json     @default("{}")
+  active          Boolean  @default(true)
+  stripePriceId   String?  @unique @map("stripe_price_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  invoices        Invoice[]
+
+  @@map("plans")
+}
+
+model Invoice {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  subscriptionId  String   @map("subscription_id") @db.Uuid
+  planId          String   @map("plan_id") @db.Uuid
+  stripeInvoiceId String?  @unique @map("stripe_invoice_id")
+  amountDue       Int      @map("amount_due")
+  amountPaid      Int      @default(0) @map("amount_paid")
+  currency        String   @default("USD")
+  status          String   @default("draft")
+  periodStart     DateTime @map("period_start")
+  periodEnd       DateTime @map("period_end")
+  paidAt          DateTime? @map("paid_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id])
+  plan            Plan         @relation(fields: [planId], references: [id])
+
+  @@index([tenantId])
+  @@index([subscriptionId])
+  @@map("invoices")
+}
+
+model ApplicationStageEvent {
+  id              String   @id @default(uuid()) @db.Uuid
+  applicationId   String   @map("application_id") @db.Uuid
+  fromStage       String?  @map("from_stage")
+  toStage         String   @map("to_stage")
+  actorId         String   @map("actor_id") @db.Uuid
+  reason          String?
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  application     Application @relation(fields: [applicationId], references: [id])
+  actor           User        @relation("StageChanges", fields: [actorId], references: [id])
+
+  @@index([applicationId, createdAt])
+  @@map("application_stage_events")
+}
+
+model DemoSession {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  scenario        String?
+  ipAddress       String?  @map("ip_address")
+  userAgent       String?  @map("user_agent")
+  expiresAt       DateTime @map("expires_at")
+  cleanedUp       Boolean  @default(false) @map("cleaned_up")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([expiresAt])
+  @@map("demo_sessions")
+}
+
+model FeatureFlag {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String?  @map("tenant_id") @db.Uuid
+  key             String
+  enabled         Boolean  @default(false)
+  value           Json?
+  description     String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, key])
+  @@index([key])
+  @@map("feature_flags")
 }
 
 model IdempotencyKey {
