@@ -24,7 +24,7 @@ describe('[F-202] PII Redaction', () => {
       const result = redactPiiFromObject({
         user: { password: 'secret', email: 'alice@example.com' },
       });
-      expect((result.user as Record<string, unknown>).password).toBe('[REDACTED]');
+      expect((result['user'] as Record<string, unknown>)['password']).toBe('[REDACTED]');
     });
 
     it('redacts emails in string values', () => {
@@ -57,13 +57,13 @@ describe('[F-202] PII Redaction', () => {
   describe('redactHeaders', () => {
     it('redacts authorization header', () => {
       const result = redactHeaders({ authorization: 'Bearer xyz', 'content-type': 'application/json' });
-      expect(result.authorization).toBe('[REDACTED]');
+      expect(result['authorization']).toBe('[REDACTED]');
       expect(result['content-type']).toBe('application/json');
     });
 
     it('redacts cookie header', () => {
       const result = redactHeaders({ cookie: 'session=abc123' });
-      expect(result.cookie).toBe('[REDACTED]');
+      expect(result['cookie']).toBe('[REDACTED]');
     });
 
     it('redacts x-api-key header', () => {

@@ -61,6 +61,9 @@ describe('Jobs Actions', () => {
         description: 'Build amazing things with our team',
         employmentType: 'full_time',
         experienceLevel: 'senior',
+        remote: false,
+        salaryCurrency: 'USD',
+        skills: [],
       });
       expect(result.success).toBe(true);
       if (result.success) {
@@ -77,6 +80,9 @@ describe('Jobs Actions', () => {
         description: 'Valid description here',
         employmentType: 'invalid_type' as never,
         experienceLevel: 'mid',
+        remote: false,
+        salaryCurrency: 'USD',
+        skills: [],
       });
       expect(result.success).toBe(false);
     });

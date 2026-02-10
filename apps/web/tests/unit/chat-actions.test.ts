@@ -83,7 +83,7 @@ describe('Chat Actions', () => {
         body: 'Hello',
       });
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Not a participant');
+      if (!result.success) expect(result.error).toContain('Not a participant');
     });
 
     it('rejects message to wrong tenant conversation', async () => {
@@ -99,7 +99,7 @@ describe('Chat Actions', () => {
         body: 'Hello',
       });
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Conversation not found');
+      if (!result.success) expect(result.error).toBe('Conversation not found');
     });
 
     it('sends message successfully', async () => {

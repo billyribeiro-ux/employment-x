@@ -62,12 +62,15 @@ vi.mock('@/lib/server/auth', () => ({
 
 // ── Helpers ────────────────────────────────────────────────────────────
 function makeRequest(method: string, url: string, body?: unknown): NextRequest {
-  const init: RequestInit = { method, headers: { authorization: 'Bearer test-token' } };
+  const headers: Record<string, string> = { authorization: 'Bearer test-token' };
   if (body) {
-    init.body = JSON.stringify(body);
-    (init.headers as Record<string, string>)['content-type'] = 'application/json';
+    headers['content-type'] = 'application/json';
   }
-  return new NextRequest(new URL(url, 'http://localhost:3000'), init);
+  return new NextRequest(new URL(url, 'http://localhost:3000'), {
+    method,
+    headers,
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
 }
 
 function authAs(role: string, opts: { orgId?: string; orgRole?: string; userId?: string } = {}) {
@@ -249,7 +252,7 @@ describe('Route Handler Integration Tests', () => {
     });
 
     it('candidate can read own profile', async () => {
-      authAs('candidate', { orgId: undefined });
+      authAs('candidate');
       const { prisma } = await import('@/lib/server/db');
       vi.mocked(prisma.candidateProfile.findUnique).mockResolvedValueOnce(null);
 
@@ -325,7 +328,7 @@ describe('Route Handler Integration Tests', () => {
     });
 
     it('candidate can apply to published job', async () => {
-      authAs('candidate', { userId: 'user-cand', orgId: undefined });
+      authAs('candidate', { userId: 'user-cand' });
       const { prisma } = await import('@/lib/server/db');
       vi.mocked(prisma.job.findUnique).mockResolvedValueOnce({
         id: 'job-1',

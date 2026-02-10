@@ -45,6 +45,8 @@ describe('Meeting Actions', () => {
         scheduledStartAt: '2026-03-01T15:00:00Z',
         scheduledEndAt: '2026-03-01T14:00:00Z',
         participants: [{ userId: 'user-1', role: 'HOST' }],
+        joinWindowMinutesBefore: 10,
+        joinWindowMinutesAfter: 5,
       });
       expect(result.success).toBe(false);
     });
@@ -60,6 +62,8 @@ describe('Meeting Actions', () => {
         scheduledStartAt: '2026-03-01T14:00:00Z',
         scheduledEndAt: '2026-03-01T15:00:00Z',
         participants: [{ userId: 'user-1', role: 'HOST' }],
+        joinWindowMinutesBefore: 10,
+        joinWindowMinutesAfter: 5,
       });
       expect(result.success).toBe(false);
     });
