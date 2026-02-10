@@ -1,4 +1,5 @@
 import { AbilityBuilder, createMongoAbility, type MongoAbility } from '@casl/ability';
+import { AppError } from './errors';
 
 type Actions = 'create' | 'read' | 'update' | 'delete' | 'manage';
 type Subjects =
@@ -114,7 +115,6 @@ export function defineAbilitiesFor(ctx: RbacContext): AppAbility {
 
 export function assertCan(ability: AppAbility, action: Actions, subject: Subjects): void {
   if (!ability.can(action, subject)) {
-    const { AppError } = require('./errors') as typeof import('./errors');
     throw new AppError('FORBIDDEN', `Not authorized to ${action} ${subject}`);
   }
 }
